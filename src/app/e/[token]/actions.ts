@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 /**
  * Customer-side response from the public link. No auth — the token is the credential.
@@ -13,7 +14,14 @@ export async function respondToEstimate(
   decision: "ACCEPTED" | "DECLINED",
   input: { signerName?: string; reason?: string },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const e = await prisma.estimate.findUnique({ where: { publicToken: token }, select: { id: true, status: true, expiresAt: true } });
+  const h = await headers();
+  const ip = clientIp(h);
+  // 5 responses per IP per 10 min, and 3 per estimate per 10 min regardless of IP
+  if (!rateLimit(`respond:ip:${ip}`, 5, 600_000) || !rateLimit(`respond:tok:${token}`, 3, 600_000)) {
+    return { ok: false, error: "Too many attempts. Please wait a few minutes and try again." };
+  }
+
+  const e = await prisma.estimate.findUnique({ where: { publicToken: token }, select: { id: true, status: true, expiresAt: true, kind: true } });
   if (!e) return { ok: false, error: "This estimate no longer exists." };
   if (e.status !== "SENT" && e.status !== "VIEWED") return { ok: false, error: "This estimate is no longer open for a response." };
   if (decision === "ACCEPTED" && e.expiresAt && e.expiresAt < new Date()) return { ok: false, error: "This estimate has expired. Please ask for an updated one." };
@@ -21,8 +29,7 @@ export async function respondToEstimate(
   const signerName = input.signerName?.trim() ?? "";
   if (decision === "ACCEPTED" && signerName.length < 2) return { ok: false, error: "Please type your full name." };
 
-  const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  if (e.kind !== "ESTIMATE") return { ok: false, error: "Invoices cannot be accepted here." };
 
   await prisma.estimate.update({
     where: { id: e.id },

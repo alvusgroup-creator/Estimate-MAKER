@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Plus } from "lucide-react";
 import { requireOrg } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { expireStaleEstimates } from "@/lib/estimates/expire";
 import { formatMoney } from "@/lib/estimates/calc";
 import { clientDisplayName, daysFromNow } from "@/lib/utils";
 import { Card, CardBody, CardHeader, CardTitle, EmptyState } from "@/components/ui/card";
@@ -12,9 +13,10 @@ export const metadata = { title: "Home" };
 
 export default async function DashboardPage() {
   const { orgId, org } = await requireOrg();
+  await expireStaleEstimates(orgId);
   const since30d = daysFromNow(-30);
 
-  const [recent, open, accepted30d, sent30d, clientCount] = await Promise.all([
+  const [recent, open, accepted30d, sent30d, unpaid, clientCount] = await Promise.all([
     prisma.estimate.findMany({
       where: { organizationId: orgId },
       orderBy: { updatedAt: "desc" },
@@ -22,16 +24,17 @@ export default async function DashboardPage() {
       include: { client: true },
     }),
     prisma.estimate.aggregate({
-      where: { organizationId: orgId, status: { in: ["SENT", "VIEWED"] } },
+      where: { organizationId: orgId, kind: "ESTIMATE", status: { in: ["SENT", "VIEWED"] } },
       _sum: { total: true },
       _count: true,
     }),
     prisma.estimate.aggregate({
-      where: { organizationId: orgId, status: "ACCEPTED", acceptedAt: { gte: since30d } },
+      where: { organizationId: orgId, kind: "ESTIMATE", status: "ACCEPTED", acceptedAt: { gte: since30d } },
       _sum: { total: true },
       _count: true,
     }),
-    prisma.estimate.count({ where: { organizationId: orgId, sentAt: { gte: since30d } } }),
+    prisma.estimate.count({ where: { organizationId: orgId, kind: "ESTIMATE", sentAt: { gte: since30d } } }),
+    prisma.estimate.aggregate({ where: { organizationId: orgId, kind: "INVOICE", status: { in: ["DRAFT", "SENT", "VIEWED"] } }, _sum: { total: true, depositAmount: true }, _count: true }),
     prisma.client.count({ where: { organizationId: orgId, archivedAt: null } }),
   ]);
 
@@ -50,8 +53,9 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <Stat label="Awaiting response" value={money(open._sum.total)} sub={`${open._count} open`} />
+        <Stat label="Unpaid invoices" value={money(Number(unpaid._sum.total ?? 0) - Number(unpaid._sum.depositAmount ?? 0))} sub={`${unpaid._count} invoice${unpaid._count === 1 ? "" : "s"}`} href="/estimates?f=unpaid" />
         <Stat label="Won · 30 days" value={money(accepted30d._sum.total)} sub={`${accepted30d._count} accepted`} />
         <Stat label="Win rate · 30 days" value={winRate === null ? "—" : `${winRate}%`} sub={`${sent30d} sent`} />
         <Stat label="Clients" value={String(clientCount)} sub="in your book" />
@@ -93,14 +97,13 @@ export default async function DashboardPage() {
   );
 }
 
-function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return (
-    <Card>
+function Stat({ label, value, sub, href }: { label: string; value: string; sub: string; href?: string }) {
+  const body = (
       <CardBody className="p-4">
         <p className="text-xs text-muted">{label}</p>
         <p className="text-xl font-semibold tabular-nums mt-1">{value}</p>
         <p className="text-xs text-muted mt-0.5">{sub}</p>
       </CardBody>
-    </Card>
   );
+  return href ? <Link href={href}><Card className="hover:bg-background">{body}</Card></Link> : <Card>{body}</Card>;
 }

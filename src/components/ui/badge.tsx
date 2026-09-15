@@ -8,6 +8,7 @@ const statusStyles: Record<EstimateStatus, string> = {
   ACCEPTED: "bg-success-soft text-success",
   DECLINED: "bg-danger-soft text-danger",
   EXPIRED: "bg-black/5 text-muted line-through",
+  PAID: "bg-success text-white",
 };
 
 export const statusLabels: Record<EstimateStatus, string> = {
@@ -17,6 +18,7 @@ export const statusLabels: Record<EstimateStatus, string> = {
   ACCEPTED: "Accepted",
   DECLINED: "Declined",
   EXPIRED: "Expired",
+  PAID: "Paid",
 };
 
 export function StatusBadge({ status, className }: { status: EstimateStatus; className?: string }) {

@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Copy, CopyPlus, ExternalLink, Printer, Send, ThumbsDown, ThumbsUp, Trash2, Undo2 } from "lucide-react";
+import { BadgeDollarSign, Check, Copy, CopyPlus, ExternalLink, FileText, Printer, Receipt, Send, ThumbsDown, ThumbsUp, Trash2, Undo2 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
-import { deleteEstimate, duplicateEstimate, setEstimateStatus } from "@/lib/estimates/actions";
+import { convertToInvoice, deleteEstimate, duplicateEstimate, markInvoicePaid, setEstimateStatus } from "@/lib/estimates/actions";
 import type { EstimateDTO } from "@/lib/estimates/dto";
 
 export function EstimateActions({ estimate, publicUrl }: { estimate: EstimateDTO; publicUrl: string }) {
   const [pending, start] = useTransition();
   const [copied, setCopied] = useState(false);
   const s = estimate.status;
+  const inv = estimate.kind === "INVOICE";
+  const docWord = inv ? "invoice" : "estimate";
 
   const copy = async () => {
     await navigator.clipboard.writeText(publicUrl);
@@ -19,8 +22,8 @@ export function EstimateActions({ estimate, publicUrl }: { estimate: EstimateDTO
     if (s === "DRAFT") start(() => setEstimateStatus(estimate.id, "SENT"));
   };
 
-  const smsHref = `sms:${estimate.client.phone ?? ""}?&body=${encodeURIComponent(`Hi ${estimate.client.firstName}, here's your estimate ${estimate.number}: ${publicUrl}`)}`;
-  const mailHref = `mailto:${estimate.client.email ?? ""}?subject=${encodeURIComponent(`Estimate ${estimate.number}`)}&body=${encodeURIComponent(`Hi ${estimate.client.firstName},\n\nHere's your estimate: ${publicUrl}\n\nLet me know if you have any questions.`)}`;
+  const smsHref = `sms:${estimate.client.phone ?? ""}?&body=${encodeURIComponent(`Hi ${estimate.client.firstName}, here's your ${docWord} ${estimate.number}: ${publicUrl}`)}`;
+  const mailHref = `mailto:${estimate.client.email ?? ""}?subject=${encodeURIComponent(`${inv ? "Invoice" : "Estimate"} ${estimate.number}`)}&body=${encodeURIComponent(`Hi ${estimate.client.firstName},\n\nHere's your ${docWord}: ${publicUrl}\n\nLet me know if you have any questions.`)}`;
 
   return (
     <Card>
@@ -47,16 +50,32 @@ export function EstimateActions({ estimate, publicUrl }: { estimate: EstimateDTO
         </div>
 
         <div className="border-t border-border pt-3 mt-1 space-y-2">
-          {(s === "SENT" || s === "VIEWED") && (
+          {inv && (s === "SENT" || s === "VIEWED" || s === "DRAFT") && (
+            <Button className="w-full bg-success hover:bg-success/90 text-white" disabled={pending} onClick={() => start(() => markInvoicePaid(estimate.id, true))}><BadgeDollarSign className="h-4 w-4" /> Mark as paid</Button>
+          )}
+          {inv && s === "PAID" && (
+            <Button variant="secondary" className="w-full" disabled={pending} onClick={() => start(() => markInvoicePaid(estimate.id, false))}><Undo2 className="h-4 w-4" /> Mark as unpaid</Button>
+          )}
+          {!inv && s === "ACCEPTED" && (
+            estimate.invoiceId ? (
+              <Link href={`/estimates/${estimate.invoiceId}`} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"><Receipt className="h-4 w-4" /> Open invoice</Link>
+            ) : (
+              <Button className="w-full" disabled={pending} onClick={() => start(() => convertToInvoice(estimate.id))}><Receipt className="h-4 w-4" /> Convert to invoice</Button>
+            )
+          )}
+          {inv && estimate.sourceEstimateId && (
+            <Link href={`/estimates/${estimate.sourceEstimateId}`} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium text-muted hover:bg-black/5"><FileText className="h-4 w-4" /> View source estimate</Link>
+          )}
+          {!inv && (s === "SENT" || s === "VIEWED") && (
             <div className="grid grid-cols-2 gap-2">
               <Button variant="secondary" className="text-success" disabled={pending} onClick={() => start(() => setEstimateStatus(estimate.id, "ACCEPTED"))}><ThumbsUp className="h-4 w-4" /> Accepted</Button>
               <Button variant="secondary" className="text-danger" disabled={pending} onClick={() => start(() => setEstimateStatus(estimate.id, "DECLINED"))}><ThumbsDown className="h-4 w-4" /> Declined</Button>
             </div>
           )}
-          {(s === "ACCEPTED" || s === "DECLINED" || s === "EXPIRED") && (
+          {!inv && (s === "ACCEPTED" || s === "DECLINED" || s === "EXPIRED") && (
             <Button variant="secondary" className="w-full" disabled={pending} onClick={() => start(() => setEstimateStatus(estimate.id, "SENT"))}><Undo2 className="h-4 w-4" /> Reopen</Button>
           )}
-          <Button variant="secondary" className="w-full" disabled={pending} onClick={() => start(() => duplicateEstimate(estimate.id))}><CopyPlus className="h-4 w-4" /> Duplicate</Button>
+          {!inv && <Button variant="secondary" className="w-full" disabled={pending} onClick={() => start(() => duplicateEstimate(estimate.id))}><CopyPlus className="h-4 w-4" /> Duplicate</Button>}
           {s === "DRAFT" && (
             <Button variant="danger" className="w-full" disabled={pending} onClick={() => confirm("Delete this draft?") && start(() => deleteEstimate(estimate.id))}><Trash2 className="h-4 w-4" /> Delete draft</Button>
           )}

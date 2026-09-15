@@ -40,6 +40,12 @@ export type DocumentData = {
   // Customer acceptance (public link)
   acceptedAt?: string | Date | null;
   signerName?: string | null;
+  // Invoice mode
+  kind?: "ESTIMATE" | "INVOICE";
+  dueDate?: string | Date | null;
+  paidAt?: string | Date | null;
+  // Job photos shown on the document
+  photos?: { url: string; caption?: string | null }[];
 };
 
 type Ctx = {
@@ -52,6 +58,8 @@ type Ctx = {
   jobAddr: string[];
   showJob: boolean;
   pct: string;
+  isInvoice: boolean;
+  heading: string;
 };
 
 export function EstimateDocument({ template, org, data, className }: {
@@ -72,7 +80,9 @@ export function EstimateDocument({ template, org, data, className }: {
     clientAddr,
     jobAddr,
     showJob: jobAddr.length > 0 && jobAddr.join() !== clientAddr.join(),
-    pct: (data.taxRate * 100).toFixed(2).replace(/\.?0+$/, ""),
+    pct: (data.taxRate * 100).toFixed(2).replace(/.?0+$/, ""),
+    isInvoice: data.kind === "INVOICE",
+    heading: data.kind === "INVOICE" ? "Invoice" : "Estimate",
   };
 
   const Layout = template === "BOLD" ? BoldLayout : template === "CLASSIC" ? ClassicLayout : CleanLayout;
@@ -118,11 +128,14 @@ function Party({ label, name, lines, contact }: { label: string; name?: string; 
 }
 
 function MetaRows({ data, date, dense }: { data: DocumentData; date: Ctx["date"]; dense?: boolean }) {
+  const inv = data.kind === "INVOICE";
   const rows: [string, string][] = [
-    ["Estimate #", data.number],
+    [inv ? "Invoice #" : "Estimate #", data.number],
     ["Date", date(data.issueDate)],
   ];
-  if (data.expiresAt) rows.push(["Valid until", date(data.expiresAt)]);
+  if (inv && data.dueDate) rows.push(["Due date", date(data.dueDate)]);
+  if (!inv && data.expiresAt) rows.push(["Valid until", date(data.expiresAt)]);
+  if (inv && data.paidAt) rows.push(["Paid", date(data.paidAt)]);
   return (
     <dl className={`grid grid-cols-[auto_1fr] gap-x-6 ${dense ? "gap-y-0.5" : "gap-y-1.5"} text-[12.5px] whitespace-nowrap`}>
       {rows.map(([k, v]) => (
@@ -206,11 +219,20 @@ function Totals({ ctx, variant }: { ctx: Ctx; variant: "clean" | "bold" | "class
         </div>
       )}
 
-      {data.depositAmount > 0 && (
+      {data.depositAmount > 0 && !ctx.isInvoice && (
         <div className={`${row} text-[12.5px] mt-1`}>
           <span>Deposit due on acceptance</span>
           <span className="tabular-nums font-semibold text-neutral-900">{money(data.depositAmount)}</span>
         </div>
+      )}
+      {ctx.isInvoice && data.depositAmount > 0 && (
+        <>
+          <div className={`${row} text-[12.5px] mt-1`}><span>Deposit received</span><span className="tabular-nums">− {money(data.depositAmount)}</span></div>
+          <div className="flex justify-between items-baseline pt-1 text-[14px] font-semibold"><span>{data.paidAt ? "Paid in full" : "Balance due"}</span><span className="tabular-nums">{money(data.paidAt ? 0 : data.total - data.depositAmount)}</span></div>
+        </>
+      )}
+      {ctx.isInvoice && data.depositAmount === 0 && data.paidAt && (
+        <div className="flex justify-between items-baseline pt-1 text-[13px] font-semibold text-green-700"><span>Paid</span><span className="tabular-nums">{money(data.total)}</span></div>
       )}
     </div>
   );
@@ -239,6 +261,20 @@ function NotesTerms({ data, cols = false }: { data: DocumentData; cols?: boolean
 /** Signature block: contractor (from settings) + customer (from acceptance, or blank line). */
 function Signatures({ ctx, variant }: { ctx: Ctx; variant: "clean" | "bold" | "classic" }) {
   const { org, data, date } = ctx;
+  if (ctx.isInvoice) {
+    return (
+      <section className="flex items-end justify-between gap-6 pt-2">
+        <p className="text-[12px] text-neutral-600">Thank you for your business.</p>
+        {org.signatureDataUrl && (
+          <div className="text-right">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={org.signatureDataUrl} alt="Signature" className="h-12 w-auto max-w-[200px] object-contain ml-auto" />
+            <p className="text-[11px] text-neutral-600 mt-1">{org.signatureName || org.name}</p>
+          </div>
+        )}
+      </section>
+    );
+  }
   const line = variant === "classic" ? "border-neutral-800" : "border-neutral-400";
   return (
     <section className="grid grid-cols-2 gap-10 pt-2">
@@ -303,7 +339,7 @@ function CleanLayout(ctx: Ctx) {
     <div className="flex flex-col flex-1 p-8 sm:p-12 print:p-8 gap-9">
       <header className="flex items-start justify-between gap-6">
         <div>
-          <p className="text-[34px] font-bold tracking-tight leading-none" style={{ color: "var(--doc-primary)" }}>Estimate</p>
+          <p className="text-[34px] font-bold tracking-tight leading-none" style={{ color: "var(--doc-primary)" }}>{ctx.heading}</p>
           {data.title && <p className="mt-2 text-[14px] text-neutral-600">{data.title}</p>}
         </div>
         <Logo org={org} />
@@ -326,6 +362,7 @@ function CleanLayout(ctx: Ctx) {
       <Lines ctx={ctx} variant="clean" />
       <Totals ctx={ctx} variant="clean" />
       <NotesTerms data={data} cols />
+      <Photos ctx={ctx} />
       <Signatures ctx={ctx} variant="clean" />
       <ContactFooter org={org} orgAddr={orgAddr} />
     </div>
@@ -351,7 +388,7 @@ function BoldLayout(ctx: Ctx) {
             </div>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-[30px] font-black uppercase tracking-tight leading-none">Estimate</p>
+            <p className="text-[30px] font-black uppercase tracking-tight leading-none">{ctx.heading}</p>
             <p className="text-white/90 font-semibold text-[14px] mt-2">{data.number}</p>
           </div>
         </div>
@@ -375,6 +412,7 @@ function BoldLayout(ctx: Ctx) {
         <Lines ctx={ctx} variant="bold" />
         <Totals ctx={ctx} variant="bold" />
         <NotesTerms data={data} cols />
+        <Photos ctx={ctx} />
         <Signatures ctx={ctx} variant="bold" />
       </div>
 
@@ -401,7 +439,7 @@ function ClassicLayout(ctx: Ctx) {
             {org.email && <p className="text-neutral-700">{org.email}</p>}
           </div>
         </div>
-        <p className="text-[26px] font-bold uppercase tracking-[0.15em] shrink-0">Estimate</p>
+        <p className="text-[26px] font-bold uppercase tracking-[0.15em] shrink-0">{ctx.heading}</p>
       </header>
 
       <section className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_auto] gap-8">
@@ -415,9 +453,31 @@ function ClassicLayout(ctx: Ctx) {
       {data.title && <p className="text-[15px] font-semibold -mb-4">{data.title}</p>}
       <Lines ctx={ctx} variant="classic" />
       <Totals ctx={ctx} variant="classic" />
+      <Photos ctx={ctx} />
       <Signatures ctx={ctx} variant="classic" />
       <NotesTerms data={data} />
       <ContactFooter org={org} orgAddr={orgAddr} />
     </div>
+  );
+}
+
+/* ═══════════════════════════ job photos ═══════════════════════════ */
+
+function Photos({ ctx }: { ctx: Ctx }) {
+  const photos = ctx.data.photos ?? [];
+  if (photos.length === 0) return null;
+  return (
+    <section className="break-inside-avoid">
+      <Label>Job photos</Label>
+      <div className="grid grid-cols-3 gap-3">
+        {photos.map((p, i) => (
+          <figure key={i} className="m-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={p.url} alt={p.caption ?? ""} className="w-full aspect-[4/3] object-cover rounded-md border border-neutral-200" />
+            {p.caption && <figcaption className="text-[11px] text-neutral-600 mt-1 leading-snug">{p.caption}</figcaption>}
+          </figure>
+        ))}
+      </div>
+    </section>
   );
 }

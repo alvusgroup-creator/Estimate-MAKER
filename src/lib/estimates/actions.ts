@@ -27,6 +27,7 @@ function buildWriteData(values: EstimateFormValues) {
       template: values.template,
       issueDate: values.issueDate,
       expiresAt: values.expiresAt ?? null,
+      dueDate: values.dueDate ?? null,
       jobAddressLine1: values.jobAddressLine1 || null,
       jobAddressLine2: values.jobAddressLine2 || null,
       jobCity: values.jobCity || null,
@@ -59,6 +60,7 @@ function buildWriteData(values: EstimateFormValues) {
       isOptional: l.isOptional,
       lineTotal: totals.lineTotals[i],
     })),
+    photos: values.photos.map((p, i) => ({ url: p.url, caption: p.caption || null, showOnDocument: p.showOnDocument, position: i })),
   };
 }
 
@@ -75,7 +77,7 @@ export async function createEstimate(raw: unknown): Promise<SaveResult> {
   const client = await prisma.client.findFirst({ where: { id: parsed.data.clientId, organizationId: orgId }, select: { id: true } });
   if (!client) return { ok: false, error: "Client not found" };
 
-  const { scalar, lines } = buildWriteData(parsed.data);
+  const { scalar, lines, photos } = buildWriteData(parsed.data);
 
   const estimate = await prisma.$transaction(async (tx) => {
     // Atomic number allocation per org
@@ -93,6 +95,7 @@ export async function createEstimate(raw: unknown): Promise<SaveResult> {
         currency: org.currency,
         ...scalar,
         lineItems: { create: lines },
+        photos: { create: photos },
         events: { create: { type: "CREATED" } },
       },
       select: { id: true },
@@ -113,14 +116,16 @@ export async function updateEstimate(id: string, raw: unknown): Promise<SaveResu
   const existing = await prisma.estimate.findFirst({ where: { id, organizationId: orgId }, select: { id: true, status: true } });
   if (!existing) return { ok: false, error: "Estimate not found" };
   if (existing.status === "ACCEPTED") return { ok: false, error: "Accepted estimates are locked. Duplicate it to make changes." };
+  if (existing.status === "PAID") return { ok: false, error: "Paid invoices are locked." };
 
-  const { scalar, lines } = buildWriteData(parsed.data);
+  const { scalar, lines, photos } = buildWriteData(parsed.data);
 
   await prisma.$transaction([
     prisma.estimateLineItem.deleteMany({ where: { estimateId: id } }),
+    prisma.estimatePhoto.deleteMany({ where: { estimateId: id } }),
     prisma.estimate.update({
       where: { id },
-      data: { ...scalar, lineItems: { create: lines } },
+      data: { ...scalar, lineItems: { create: lines }, photos: { create: photos } },
     }),
   ]);
 
@@ -233,4 +238,94 @@ export async function deleteEstimate(id: string) {
   revalidatePath("/estimates");
   revalidatePath("/dashboard");
   redirect("/estimates");
+}
+
+/**
+ * Accepted estimate → invoice. Same lines and totals, new number (INV-), due date from org default.
+ * One invoice per estimate (sourceEstimateId is unique); re-running opens the existing one.
+ */
+export async function convertToInvoice(estimateId: string) {
+  const { orgId } = await requireOrg();
+  const src = await prisma.estimate.findFirst({
+    where: { id: estimateId, organizationId: orgId, kind: "ESTIMATE" },
+    include: { lineItems: true, invoice: { select: { id: true } }, photos: true },
+  });
+  if (!src) throw new Error("Not found");
+  if (src.invoice) redirect(`/estimates/${src.invoice.id}`);
+
+  const inv = await prisma.$transaction(async (tx) => {
+    const org = await tx.organization.update({
+      where: { id: orgId },
+      data: { nextInvoiceNumber: { increment: 1 } },
+      select: { invoicePrefix: true, nextInvoiceNumber: true, defaultDueDays: true },
+    });
+    const number = `${org.invoicePrefix}${org.nextInvoiceNumber - 1}`;
+
+    const created = await tx.estimate.create({
+      data: {
+        organizationId: orgId,
+        kind: "INVOICE",
+        sourceEstimateId: src.id,
+        clientId: src.clientId,
+        number,
+        title: src.title,
+        template: src.template,
+        status: "DRAFT",
+        issueDate: new Date(),
+        dueDate: new Date(Date.now() + org.defaultDueDays * 864e5),
+        jobAddressLine1: src.jobAddressLine1,
+        jobAddressLine2: src.jobAddressLine2,
+        jobCity: src.jobCity,
+        jobState: src.jobState,
+        jobPostalCode: src.jobPostalCode,
+        notes: src.notes,
+        terms: src.terms,
+        internalNotes: src.internalNotes,
+        currency: src.currency,
+        subtotal: src.subtotal,
+        discountType: src.discountType,
+        discountValue: src.discountValue,
+        discountAmount: src.discountAmount,
+        taxRate: src.taxRate,
+        taxLabel: src.taxLabel,
+        taxAmount: src.taxAmount,
+        total: src.total,
+        // Deposit already collected on acceptance is carried over so the invoice shows the balance
+        depositType: src.depositType,
+        depositValue: src.depositValue,
+        depositAmount: src.depositAmount,
+        lineItems: {
+          create: src.lineItems.map((l) => ({
+            position: l.position, serviceItemId: l.serviceItemId, name: l.name, description: l.description,
+            quantity: l.quantity, unit: l.unit, unitPrice: l.unitPrice, taxable: l.taxable, isOptional: l.isOptional, lineTotal: l.lineTotal,
+          })),
+        },
+        photos: { create: src.photos.map((p) => ({ url: p.url, caption: p.caption, position: p.position, showOnDocument: false })) },
+        events: { create: { type: "CREATED", metadata: { from: src.id } } },
+      },
+      select: { id: true },
+    });
+
+    await tx.estimateEvent.create({ data: { estimateId: src.id, type: "CONVERTED_TO_INVOICE", metadata: { invoiceId: created.id, number } } });
+    return created;
+  });
+
+  revalidatePath("/estimates");
+  revalidatePath(`/estimates/${estimateId}`);
+  redirect(`/estimates/${inv.id}`);
+}
+
+export async function markInvoicePaid(id: string, paid: boolean) {
+  const { orgId } = await requireOrg();
+  const inv = await prisma.estimate.findFirst({ where: { id, organizationId: orgId, kind: "INVOICE" }, select: { status: true } });
+  if (!inv) throw new Error("Not found");
+  await prisma.estimate.update({
+    where: { id },
+    data: paid
+      ? { status: "PAID", paidAt: new Date(), events: { create: { type: "PAID" } } }
+      : { status: "SENT", paidAt: null, events: { create: { type: "STATUS_CHANGED", metadata: { from: "PAID", to: "SENT" } } } },
+  });
+  revalidatePath(`/estimates/${id}`);
+  revalidatePath("/estimates");
+  revalidatePath("/dashboard");
 }

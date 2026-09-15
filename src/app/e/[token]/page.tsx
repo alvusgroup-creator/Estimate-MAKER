@@ -5,13 +5,15 @@ import { toEstimateDTO, toOrgBranding } from "@/lib/estimates/dto";
 import { EstimateDocument } from "@/components/templates/estimate-document";
 import { PublicActions } from "./public-actions";
 import { PrintTrigger } from "./print-trigger";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { expireStaleEstimates } from "@/lib/estimates/expire";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const e = await prisma.estimate.findUnique({ where: { publicToken: token }, select: { number: true, organization: { select: { name: true } } } });
-  return { title: e ? `Estimate ${e.number} · ${e.organization.name}` : "Estimate", robots: { index: false } };
+  const e = await prisma.estimate.findUnique({ where: { publicToken: token }, select: { number: true, kind: true, organization: { select: { name: true } } } });
+  return { title: e ? `${e.kind === "INVOICE" ? "Invoice" : "Estimate"} ${e.number} · ${e.organization.name}` : "Estimate", robots: { index: false } };
 }
 
 export default async function PublicEstimatePage({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ print?: string }> }) {
@@ -19,12 +21,19 @@ export default async function PublicEstimatePage({ params, searchParams }: { par
 
   const raw = await prisma.estimate.findUnique({
     where: { publicToken: token },
-    include: { client: true, lineItems: true, organization: true },
+    include: { client: true, lineItems: true, photos: true, organization: true, invoice: { select: { id: true } } },
   });
   if (!raw || raw.status === "DRAFT") notFound();
 
-  // Track the view (first view flips SENT → VIEWED). Never count the contractor's own print view.
-  if (!print) {
+  // Lazily expire if the customer opens a stale link
+  if (raw.kind === "ESTIMATE" && (raw.status === "SENT" || raw.status === "VIEWED") && raw.expiresAt && raw.expiresAt < new Date()) {
+    await expireStaleEstimates(raw.organizationId);
+    raw.status = "EXPIRED";
+  }
+
+  // Track the view (first view flips SENT → VIEWED). Never count the contractor's own print view,
+  // and count at most one view per IP per hour so refreshes don't inflate the number.
+  if (!print && rateLimit(`view:${token}:${clientIp(hdrs)}`, 1, 3_600_000)) {
     await prisma.estimate.update({
       where: { id: raw.id },
       data: {
@@ -38,7 +47,7 @@ export default async function PublicEstimatePage({ params, searchParams }: { par
 
   const estimate = toEstimateDTO(raw);
   const org = toOrgBranding(raw.organization);
-  const canRespond = raw.status === "SENT" || raw.status === "VIEWED";
+  const canRespond = raw.kind === "ESTIMATE" && (raw.status === "SENT" || raw.status === "VIEWED");
 
   return (
     <main className="min-h-screen bg-neutral-100 print:bg-white">
@@ -51,11 +60,12 @@ export default async function PublicEstimatePage({ params, searchParams }: { par
               ...estimate,
               jobAddress: { addressLine1: estimate.jobAddressLine1, addressLine2: estimate.jobAddressLine2, city: estimate.jobCity, state: estimate.jobState, postalCode: estimate.jobPostalCode },
               lines: estimate.lineItems,
+              photos: estimate.photos.filter((p) => p.showOnDocument),
             }}
           />
         </div>
         <div className="print:hidden">
-          <PublicActions token={token} status={raw.status} canRespond={canRespond} orgName={org.name} orgPhone={org.phone} orgEmail={org.email} />
+          <PublicActions token={token} status={raw.status} kind={raw.kind} canRespond={canRespond} orgName={org.name} orgPhone={org.phone} orgEmail={org.email} />
         </div>
       </div>
       {print && <PrintTrigger />}

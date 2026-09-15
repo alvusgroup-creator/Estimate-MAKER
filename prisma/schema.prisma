@@ -68,6 +68,9 @@ model Organization {
   defaultDepositValue Decimal?      @db.Decimal(12, 2)
   estimatePrefix      String        @default("EST-")
   nextEstimateNumber  Int           @default(1001)
+  invoicePrefix       String        @default("INV-")
+  nextInvoiceNumber   Int           @default(1001)
+  defaultDueDays      Int           @default(14)
 
   // Billing (v1.1 — Stripe)
   plan             Plan    @default(FREE)
@@ -191,6 +194,14 @@ enum EstimateStatus {
   ACCEPTED
   DECLINED
   EXPIRED
+  PAID     // invoices only
+}
+
+// One table serves both documents: an invoice is an estimate with kind=INVOICE,
+// usually created from an accepted estimate (sourceEstimateId).
+enum DocumentKind {
+  ESTIMATE
+  INVOICE
 }
 
 enum DiscountType {
@@ -209,13 +220,21 @@ model Estimate {
   clientId String
   client   Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
 
-  number   String // "EST-1001" — snapshot of prefix+sequence at creation
+  kind     DocumentKind   @default(ESTIMATE)
+  number   String // "EST-1001" / "INV-1001" — snapshot of prefix+sequence at creation
   title    String? // "Exterior repaint — 123 Main St"
   status   EstimateStatus @default(DRAFT)
   template Template       @default(CLEAN)
 
   issueDate DateTime  @default(now())
-  expiresAt DateTime?
+  expiresAt DateTime? // estimates: validity
+  dueDate   DateTime? // invoices: payment due
+  paidAt    DateTime?
+
+  // Invoice ← estimate lineage
+  sourceEstimateId String?   @unique
+  sourceEstimate   Estimate? @relation("EstimateToInvoice", fields: [sourceEstimateId], references: [id], onDelete: SetNull)
+  invoice          Estimate? @relation("EstimateToInvoice")
 
   // Snapshot of the job address (client address can change later)
   jobAddressLine1 String?
@@ -259,8 +278,11 @@ model Estimate {
   lineItems EstimateLineItem[]
   events    EstimateEvent[]
   aiRuns    AiRecommendation[]
+  photos    EstimatePhoto[]
 
   @@unique([organizationId, number])
+  @@index([organizationId, kind, status])
+  @@index([status, expiresAt])
   @@index([organizationId, status])
   @@index([organizationId, clientId])
   @@index([organizationId, createdAt])
@@ -297,6 +319,25 @@ enum EstimateEventType {
   DECLINED
   DUPLICATED
   STATUS_CHANGED
+  EXPIRED
+  CONVERTED_TO_INVOICE
+  PAID
+}
+
+// Job-site photos attached to an estimate (before/after, damage, measurements)
+model EstimatePhoto {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  estimateId String
+  estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  url      String
+  caption  String?
+  position Int      @default(0)
+  showOnDocument Boolean @default(true)
+
+  @@index([estimateId, position])
 }
 
 model EstimateEvent {

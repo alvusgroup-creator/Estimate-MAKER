@@ -28,6 +28,6 @@ export async function loadEditorData(orgId: string, org: Organization) {
 }
 
 export async function loadEstimate(orgId: string, id: string) {
-  const e = await prisma.estimate.findFirst({ where: { id, organizationId: orgId }, include: { client: true, lineItems: true } });
+  const e = await prisma.estimate.findFirst({ where: { id, organizationId: orgId }, include: { client: true, lineItems: true, photos: true, invoice: { select: { id: true } } } });
   return e ? toEstimateDTO(e) : null;
 }

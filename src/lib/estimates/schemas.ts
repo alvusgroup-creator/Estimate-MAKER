@@ -16,6 +16,12 @@ export const lineItemSchema = z.object({
   isOptional: z.boolean().default(false),
 });
 
+export const photoSchema = z.object({
+  url: z.string().url().max(1000),
+  caption: z.string().max(200).nullable().optional(),
+  showOnDocument: z.boolean().default(true),
+});
+
 export const estimateFormSchema = z.object({
   clientId: z.string().min(1, "Pick a client"),
   title: z.string().max(200).nullable().optional(),
@@ -36,7 +42,9 @@ export const estimateFormSchema = z.object({
   taxLabel: z.string().max(40).default("Sales Tax"),
   depositType: discountTypeEnum.nullable().optional(),
   depositValue: z.coerce.number().min(0).nullable().optional(),
+  dueDate: z.coerce.date().nullable().optional(),
   lineItems: z.array(lineItemSchema).min(1, "Add at least one line"),
+  photos: z.array(photoSchema).max(20).default([]),
 });
 
 export type EstimateFormValues = z.output<typeof estimateFormSchema>;

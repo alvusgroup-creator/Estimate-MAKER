@@ -7,9 +7,10 @@ import { Input, Textarea } from "@/components/ui/input";
 import { respondToEstimate } from "./actions";
 import type { EstimateStatus } from "@/generated/prisma/enums";
 
-export function PublicActions({ token, status, canRespond, orgName, orgPhone, orgEmail }: {
+export function PublicActions({ token, status, kind, canRespond, orgName, orgPhone, orgEmail }: {
   token: string;
   status: EstimateStatus;
+  kind: "ESTIMATE" | "INVOICE";
   canRespond: boolean;
   orgName: string;
   orgPhone: string | null;
@@ -31,7 +32,11 @@ export function PublicActions({ token, status, canRespond, orgName, orgPhone, or
 
   return (
     <div className="px-4 sm:px-0 py-6 space-y-4">
-      {status === "ACCEPTED" || mode === "done" ? (
+      {kind === "INVOICE" ? (
+        <div className="rounded-xl bg-white p-5 text-center border border-neutral-200 text-sm text-neutral-600">
+          {status === "PAID" ? "This invoice has been paid. Thank you!" : `To pay, contact ${orgName}${orgPhone ? ` at ${orgPhone}` : ""}.`}
+        </div>
+      ) : status === "ACCEPTED" || mode === "done" ? (
         <div className="rounded-xl bg-white p-5 text-center border border-neutral-200">
           <div className="mx-auto h-10 w-10 rounded-full bg-green-100 text-green-700 grid place-items-center mb-2"><Check className="h-5 w-5" /></div>
           <p className="font-medium">{status === "DECLINED" || (mode === "done" && !name) ? "Response recorded" : "Estimate accepted"}</p>

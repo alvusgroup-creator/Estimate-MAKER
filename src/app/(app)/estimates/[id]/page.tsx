@@ -23,7 +23,8 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
   if (!estimate) notFound();
 
   const publicUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/e/${estimate.publicToken}`;
-  const locked = estimate.status === "ACCEPTED";
+  const locked = estimate.status === "ACCEPTED" || estimate.status === "PAID";
+  const inv = estimate.kind === "INVOICE";
 
   return (
     <div className="space-y-4">
@@ -34,7 +35,7 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
             <h1 className="text-xl font-semibold truncate">{estimate.title ?? estimate.number}</h1>
             <StatusBadge status={estimate.status} />
           </div>
-          <p className="text-sm text-muted">{estimate.number}{estimate.viewCount > 0 ? ` · viewed ${estimate.viewCount}×` : ""}</p>
+          <p className="text-sm text-muted">{inv ? "Invoice" : "Estimate"} {estimate.number}{estimate.viewCount > 0 ? ` · viewed ${estimate.viewCount}×` : ""}</p>
         </div>
         {!locked && (
           <Link href={`/estimates/${id}/edit`} className={cn(buttonVariants({ variant: "secondary" }))}><Pencil className="h-4 w-4" /> Edit</Link>
@@ -50,6 +51,7 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
               ...estimate,
               jobAddress: { addressLine1: estimate.jobAddressLine1, addressLine2: estimate.jobAddressLine2, city: estimate.jobCity, state: estimate.jobState, postalCode: estimate.jobPostalCode },
               lines: estimate.lineItems,
+              photos: estimate.photos.filter((p) => p.showOnDocument),
             }}
           />
         </div>

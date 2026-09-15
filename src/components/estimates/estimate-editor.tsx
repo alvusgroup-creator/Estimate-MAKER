@@ -14,6 +14,7 @@ import { estimateFormSchema, UNIT_LABELS, type EstimateFormInput, type EstimateF
 import type { ClientDTO, EstimateDTO, OrgBranding, ServiceItemDTO } from "@/lib/estimates/dto";
 import { createEstimate, updateEstimate } from "@/lib/estimates/actions";
 import { createClientQuick } from "@/lib/clients/actions";
+import { PhotoUploader } from "@/components/estimates/photo-uploader";
 import { clientDisplayName, cn, daysFromNow } from "@/lib/utils";
 import type { Template } from "@/generated/prisma/enums";
 
@@ -56,7 +57,9 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
         taxLabel: estimate.taxLabel,
         depositType: estimate.depositType,
         depositValue: estimate.depositValue,
+        dueDate: estimate.dueDate ? new Date(estimate.dueDate) : null,
         lineItems: estimate.lineItems.map((l) => ({ ...l, description: l.description ?? null })),
+        photos: estimate.photos.map((p) => ({ url: p.url, caption: p.caption, showOnDocument: p.showOnDocument })),
       }
     : {
         clientId: preselectClientId ?? "",
@@ -74,7 +77,9 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
         taxLabel: org.taxLabel,
         depositType: org.defaultDepositType,
         depositValue: org.defaultDepositValue,
+        dueDate: null,
         lineItems: [],
+        photos: [],
       };
 
   const form = useForm<EstimateFormInput, unknown, EstimateFormValues>({ resolver: zodResolver(estimateFormSchema), defaultValues: defaults, mode: "onBlur" });
@@ -95,6 +100,8 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
     [values],
   );
 
+  const isInvoice = estimate?.kind === "INVOICE";
+  const photos = (values.photos ?? []) as { url: string; caption: string | null; showOnDocument: boolean }[];
   const selectedClient = clients.find((c) => c.id === values.clientId);
   const money = (n: number) => formatMoney(n, org.currency, org.locale);
 
@@ -152,6 +159,9 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
     depositAmount: totals.depositAmount,
     notes: values.notes,
     terms: values.terms,
+    kind: (estimate?.kind ?? "ESTIMATE") as "ESTIMATE" | "INVOICE",
+    dueDate: (values.dueDate as Date | null | undefined) ?? null,
+    photos: photos.filter((p) => p.showOnDocument).map((p) => ({ url: p.url, caption: p.caption })),
   };
 
   return (
@@ -170,9 +180,15 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
               <Field label="Date">
                 <Input type="date" {...register("issueDate", { setValueAs: (v) => (v ? new Date(v) : new Date()) })} defaultValue={toDateInput(defaults.issueDate as Date)} />
               </Field>
-              <Field label="Valid until">
-                <Input type="date" {...register("expiresAt", { setValueAs: (v) => (v ? new Date(v) : null) })} defaultValue={defaults.expiresAt ? toDateInput(defaults.expiresAt as Date) : ""} />
-              </Field>
+              {isInvoice ? (
+                <Field label="Due date">
+                  <Input type="date" {...register("dueDate", { setValueAs: (v) => (v ? new Date(v) : null) })} defaultValue={defaults.dueDate ? toDateInput(defaults.dueDate as Date) : ""} />
+                </Field>
+              ) : (
+                <Field label="Valid until">
+                  <Input type="date" {...register("expiresAt", { setValueAs: (v) => (v ? new Date(v) : null) })} defaultValue={defaults.expiresAt ? toDateInput(defaults.expiresAt as Date) : ""} />
+                </Field>
+              )}
             </div>
             <Collapsible title="Job site address" defaultOpen={false}>
               <div className="grid grid-cols-6 gap-3">
@@ -206,6 +222,16 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
         </Card>
 
         <Card>
+          <CardHeader>
+            <CardTitle>Job photos</CardTitle>
+            <span className="text-xs text-muted">{photos.length}/20</span>
+          </CardHeader>
+          <CardBody>
+            <PhotoUploader value={photos} onChange={(v) => setValue("photos", v, { shouldDirty: true })} />
+          </CardBody>
+        </Card>
+
+        <Card>
           <CardHeader><CardTitle>Pricing</CardTitle></CardHeader>
           <CardBody className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
@@ -223,7 +249,7 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
                 <Input type="number" inputMode="decimal" step="0.01" min="0" max="100" {...register("taxRate", { setValueAs: (v) => (v === "" ? 0 : Number(v) / 100) })} defaultValue={(Number(defaults.taxRate) * 100).toString()} />
               </Field>
             </div>
-            <Field label="Deposit due on acceptance">
+            <Field label={isInvoice ? "Deposit already paid" : "Deposit due on acceptance"}>
               <div className="flex gap-2">
                 <Select className="w-24" {...register("depositType", { setValueAs: (v) => (v === "" ? null : v) })}>
                   <option value="">None</option>

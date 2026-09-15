@@ -3,7 +3,7 @@
  * Prisma Decimals become numbers here and nowhere else.
  */
 import type { Prisma } from "@/generated/prisma/client";
-import type { DiscountType, EstimateStatus, Template, Unit } from "@/generated/prisma/enums";
+import type { DiscountType, DocumentKind, EstimateStatus, Template, Unit } from "@/generated/prisma/enums";
 
 export type OrgBranding = {
   name: string;
@@ -63,14 +63,21 @@ export type LineItemDTO = {
   lineTotal: number;
 };
 
+export type PhotoDTO = { id?: string; url: string; caption: string | null; showOnDocument: boolean };
+
 export type EstimateDTO = {
   id: string;
+  kind: DocumentKind;
   number: string;
   title: string | null;
   status: EstimateStatus;
   template: Template;
   issueDate: string;
   expiresAt: string | null;
+  dueDate: string | null;
+  paidAt: string | null;
+  sourceEstimateId: string | null;
+  invoiceId: string | null;
   clientId: string;
   client: ClientDTO;
   jobAddressLine1: string | null;
@@ -101,9 +108,10 @@ export type EstimateDTO = {
   declinedAt: string | null;
   signerName: string | null;
   lineItems: LineItemDTO[];
+  photos: PhotoDTO[];
 };
 
-type EstimateWithRelations = Prisma.EstimateGetPayload<{ include: { client: true; lineItems: true } }>;
+type EstimateWithRelations = Prisma.EstimateGetPayload<{ include: { client: true; lineItems: true; photos: true; invoice: { select: { id: true } } } }>;
 
 const num = (d: Prisma.Decimal | null | undefined) => (d == null ? null : Number(d));
 const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
@@ -120,12 +128,17 @@ export function toServiceItemDTO(s: Prisma.ServiceItemGetPayload<object>): Servi
 export function toEstimateDTO(e: EstimateWithRelations): EstimateDTO {
   return {
     id: e.id,
+    kind: e.kind,
     number: e.number,
     title: e.title,
     status: e.status,
     template: e.template,
     issueDate: e.issueDate.toISOString(),
     expiresAt: iso(e.expiresAt),
+    dueDate: iso(e.dueDate),
+    paidAt: iso(e.paidAt),
+    sourceEstimateId: e.sourceEstimateId,
+    invoiceId: e.invoice?.id ?? null,
     clientId: e.clientId,
     client: toClientDTO(e.client),
     jobAddressLine1: e.jobAddressLine1,
@@ -169,6 +182,7 @@ export function toEstimateDTO(e: EstimateWithRelations): EstimateDTO {
         isOptional: l.isOptional,
         lineTotal: Number(l.lineTotal),
       })),
+    photos: [...e.photos].sort((a, b) => a.position - b.position).map((p) => ({ id: p.id, url: p.url, caption: p.caption, showOnDocument: p.showOnDocument })),
   };
 }
 

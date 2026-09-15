@@ -2,31 +2,36 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { requireOrg } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { expireStaleEstimates } from "@/lib/estimates/expire";
 import { formatMoney } from "@/lib/estimates/calc";
 import { clientDisplayName, cn } from "@/lib/utils";
 import { Card, EmptyState } from "@/components/ui/card";
 import { StatusBadge, statusLabels } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import type { EstimateStatus } from "@/generated/prisma/enums";
+import type { DocumentKind, EstimateStatus } from "@/generated/prisma/enums";
 
 export const metadata = { title: "Estimates" };
 
-const filters: { key: string; label: string; statuses?: EstimateStatus[] }[] = [
-  { key: "all", label: "All" },
-  { key: "open", label: "Open", statuses: ["SENT", "VIEWED"] },
-  { key: "draft", label: "Drafts", statuses: ["DRAFT"] },
-  { key: "accepted", label: "Accepted", statuses: ["ACCEPTED"] },
-  { key: "declined", label: "Declined", statuses: ["DECLINED", "EXPIRED"] },
+const filters: { key: string; label: string; kind: DocumentKind; statuses?: EstimateStatus[] }[] = [
+  { key: "all", label: "All", kind: "ESTIMATE" },
+  { key: "open", label: "Open", kind: "ESTIMATE", statuses: ["SENT", "VIEWED"] },
+  { key: "draft", label: "Drafts", kind: "ESTIMATE", statuses: ["DRAFT"] },
+  { key: "accepted", label: "Accepted", kind: "ESTIMATE", statuses: ["ACCEPTED"] },
+  { key: "declined", label: "Declined / expired", kind: "ESTIMATE", statuses: ["DECLINED", "EXPIRED"] },
+  { key: "invoices", label: "Invoices", kind: "INVOICE" },
+  { key: "unpaid", label: "Unpaid", kind: "INVOICE", statuses: ["DRAFT", "SENT", "VIEWED"] },
 ];
 
 export default async function EstimatesPage({ searchParams }: { searchParams: Promise<{ f?: string; q?: string }> }) {
   const { f = "all", q = "" } = await searchParams;
   const { orgId, org } = await requireOrg();
+  await expireStaleEstimates(orgId);
   const filter = filters.find((x) => x.key === f) ?? filters[0];
 
   const estimates = await prisma.estimate.findMany({
     where: {
       organizationId: orgId,
+      kind: filter.kind,
       ...(filter.statuses ? { status: { in: filter.statuses } } : {}),
       ...(q
         ? {
@@ -46,7 +51,7 @@ export default async function EstimatesPage({ searchParams }: { searchParams: Pr
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Estimates</h1>
+        <h1 className="text-2xl font-semibold">{filter.kind === "INVOICE" ? "Invoices" : "Estimates"}</h1>
         <Link href="/estimates/new" className={buttonVariants()}><Plus className="h-4 w-4" /> New</Link>
       </div>
 
@@ -69,7 +74,7 @@ export default async function EstimatesPage({ searchParams }: { searchParams: Pr
 
       <Card>
         {estimates.length === 0 ? (
-          <EmptyState title={q ? "No matches" : `No ${filter.key === "all" ? "" : filter.label.toLowerCase() + " "}estimates`} description={q ? "Try a different search." : undefined} />
+          <EmptyState title={q ? "No matches" : filter.kind === "INVOICE" ? "No invoices yet" : `No ${filter.key === "all" ? "" : filter.label.toLowerCase() + " "}estimates`} description={q ? "Try a different search." : filter.kind === "INVOICE" ? "Accept an estimate, then use “Convert to invoice”." : undefined} />
         ) : (
           <ul className="divide-y divide-border">
             {estimates.map((e) => (
