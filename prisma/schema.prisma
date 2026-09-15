@@ -1,0 +1,331 @@
+// Estimate Builder — data model
+// Multi-tenant by Organization. MVP = 1 user per org, but the relation is 1:N
+// so adding team members later is a permission change, not a migration.
+// currency / locale / tax live on the org from day 1 so Canada/Portugal need no rewrite.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// Tenancy & branding
+// ─────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  PRO
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Business identity (goes on every estimate header)
+  name         String
+  email        String?
+  phone        String?
+  website      String?
+  licenseNo    String? // contractor license / EIN shown on estimates
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postalCode   String?
+  country      String  @default("US") // ISO 3166-1 alpha-2
+
+  // Branding
+  logoUrl         String?
+  primaryColor    String   @default("#111827")
+  accentColor     String   @default("#2563EB")
+  defaultTemplate Template @default(CLEAN)
+
+  // Localization / money
+  currency String @default("USD") // ISO 4217
+  locale   String @default("en-US")
+  timezone String @default("America/New_York")
+
+  // Tax defaults (US sales tax varies by state; contractor sets it)
+  defaultTaxRate Decimal @default(0) @db.Decimal(6, 4) // 0.0825 = 8.25%
+  taxLabel       String  @default("Sales Tax")          // "GST/HST", "IVA" later
+  taxConfig      Json?                                  // room for multi-rate / compound tax later
+
+  // Defaults copied into every new estimate (editable per estimate)
+  defaultNotes        String?
+  defaultTerms        String?
+  defaultValidDays    Int           @default(30)
+  defaultDepositType  DiscountType?
+  defaultDepositValue Decimal?      @db.Decimal(12, 2)
+  estimatePrefix      String        @default("EST-")
+  nextEstimateNumber  Int           @default(1001)
+
+  // Billing (v1.1 — Stripe)
+  plan             Plan    @default(FREE)
+  stripeCustomerId String? @unique
+  stripeSubId      String? @unique
+
+  users        User[]
+  clients      Client[]
+  serviceItems ServiceItem[]
+  estimates    Estimate[]
+  aiRuns       AiRecommendation[]
+}
+
+model User {
+  id        String   @id // = Supabase auth.users.id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  email     String  @unique
+  fullName  String?
+  avatarUrl String?
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+// ─────────────────────────────────────────────
+// Mini-CRM
+// ─────────────────────────────────────────────
+
+model Client {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  firstName   String
+  lastName    String?
+  companyName String?
+  email       String?
+  phone       String?
+
+  // Job site (most contractors quote by property)
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postalCode   String?
+  country      String  @default("US")
+
+  notes String?
+  tags  String[] @default([])
+
+  archivedAt DateTime?
+
+  estimates Estimate[]
+
+  @@index([organizationId, lastName, firstName])
+  @@index([organizationId, phone])
+  @@index([organizationId, email])
+}
+
+// ─────────────────────────────────────────────
+// Service catalog
+// ─────────────────────────────────────────────
+
+enum Unit {
+  HOUR
+  DAY
+  SQFT
+  LINEAR_FT
+  EACH
+  FLAT
+  CUBIC_YD
+  GALLON
+}
+
+model ServiceItem {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  category    String? // "Painting", "Demo", "Materials"…
+  unit        Unit    @default(EACH)
+  unitPrice   Decimal @db.Decimal(12, 2)
+  taxable     Boolean @default(true)
+  isMaterial  Boolean @default(false) // labor vs material split helps AI + tax later
+
+  usageCount Int       @default(0) // drives "most used" sorting in the builder
+  archivedAt DateTime?
+
+  lineItems EstimateLineItem[]
+
+  @@index([organizationId, name])
+  @@index([organizationId, usageCount])
+}
+
+// ─────────────────────────────────────────────
+// Estimates
+// ─────────────────────────────────────────────
+
+enum Template {
+  CLEAN
+  BOLD
+  CLASSIC
+}
+
+enum EstimateStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+model Estimate {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  number   String // "EST-1001" — snapshot of prefix+sequence at creation
+  title    String? // "Exterior repaint — 123 Main St"
+  status   EstimateStatus @default(DRAFT)
+  template Template       @default(CLEAN)
+
+  issueDate DateTime  @default(now())
+  expiresAt DateTime?
+
+  // Snapshot of the job address (client address can change later)
+  jobAddressLine1 String?
+  jobAddressLine2 String?
+  jobCity         String?
+  jobState        String?
+  jobPostalCode   String?
+
+  notes         String? // visible to customer
+  terms         String? // payment terms / warranty / scope exclusions
+  internalNotes String? // never rendered
+
+  // Money — stored, never recomputed on read
+  currency       String        @default("USD")
+  subtotal       Decimal       @default(0) @db.Decimal(12, 2)
+  discountType   DiscountType?
+  discountValue  Decimal?      @db.Decimal(12, 2)
+  discountAmount Decimal       @default(0) @db.Decimal(12, 2)
+  taxRate        Decimal       @default(0) @db.Decimal(6, 4)
+  taxLabel       String        @default("Sales Tax")
+  taxAmount      Decimal       @default(0) @db.Decimal(12, 2)
+  total          Decimal       @default(0) @db.Decimal(12, 2)
+  depositType    DiscountType?
+  depositValue   Decimal?      @db.Decimal(12, 2)
+  depositAmount  Decimal       @default(0) @db.Decimal(12, 2)
+
+  // Public link → /e/[publicToken]
+  publicToken   String    @unique @default(nanoid(12))
+  sentAt        DateTime?
+  viewedAt      DateTime? // first view
+  viewCount     Int       @default(0)
+  acceptedAt    DateTime?
+  declinedAt    DateTime?
+  declineReason String?
+
+  // Accept & Sign (columns ready, feature later)
+  signerName       String?
+  signatureDataUrl String?
+  signedIp         String?
+
+  lineItems EstimateLineItem[]
+  events    EstimateEvent[]
+  aiRuns    AiRecommendation[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+  @@index([organizationId, clientId])
+  @@index([organizationId, createdAt])
+}
+
+model EstimateLineItem {
+  id String @id @default(cuid())
+
+  estimateId String
+  estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  // Optional link back to catalog; the line is always a snapshot
+  serviceItemId String?
+  serviceItem   ServiceItem? @relation(fields: [serviceItemId], references: [id], onDelete: SetNull)
+
+  position    Int
+  name        String
+  description String?
+  quantity    Decimal @default(1) @db.Decimal(12, 3)
+  unit        Unit    @default(EACH)
+  unitPrice   Decimal @db.Decimal(12, 2)
+  taxable     Boolean @default(true)
+  isOptional  Boolean @default(false) // add-on lines the customer can toggle (later)
+  lineTotal   Decimal @db.Decimal(12, 2)
+
+  @@index([estimateId, position])
+}
+
+enum EstimateEventType {
+  CREATED
+  SENT
+  VIEWED
+  ACCEPTED
+  DECLINED
+  DUPLICATED
+  STATUS_CHANGED
+}
+
+model EstimateEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  estimateId String
+  estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  type     EstimateEventType
+  metadata Json? // { ip, userAgent, from, to … }
+
+  @@index([estimateId, createdAt])
+}
+
+// ─────────────────────────────────────────────
+// AI
+// ─────────────────────────────────────────────
+
+model AiRecommendation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  estimateId String?
+  estimate   Estimate? @relation(fields: [estimateId], references: [id], onDelete: SetNull)
+
+  model        String
+  inputTokens  Int
+  outputTokens Int
+  suggestions  Json // [{ type, title, detail, action? }]
+  feedback     Int? // -1 / 0 / 1 — was it useful
+
+  @@index([organizationId, createdAt])
+}

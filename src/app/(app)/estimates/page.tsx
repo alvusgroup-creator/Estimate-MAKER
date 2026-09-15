@@ -1,0 +1,93 @@
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { requireOrg } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { formatMoney } from "@/lib/estimates/calc";
+import { clientDisplayName, cn } from "@/lib/utils";
+import { Card, EmptyState } from "@/components/ui/card";
+import { StatusBadge, statusLabels } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import type { EstimateStatus } from "@/generated/prisma/enums";
+
+export const metadata = { title: "Estimates" };
+
+const filters: { key: string; label: string; statuses?: EstimateStatus[] }[] = [
+  { key: "all", label: "All" },
+  { key: "open", label: "Open", statuses: ["SENT", "VIEWED"] },
+  { key: "draft", label: "Drafts", statuses: ["DRAFT"] },
+  { key: "accepted", label: "Accepted", statuses: ["ACCEPTED"] },
+  { key: "declined", label: "Declined", statuses: ["DECLINED", "EXPIRED"] },
+];
+
+export default async function EstimatesPage({ searchParams }: { searchParams: Promise<{ f?: string; q?: string }> }) {
+  const { f = "all", q = "" } = await searchParams;
+  const { orgId, org } = await requireOrg();
+  const filter = filters.find((x) => x.key === f) ?? filters[0];
+
+  const estimates = await prisma.estimate.findMany({
+    where: {
+      organizationId: orgId,
+      ...(filter.statuses ? { status: { in: filter.statuses } } : {}),
+      ...(q
+        ? {
+            OR: [
+              { number: { contains: q, mode: "insensitive" } },
+              { title: { contains: q, mode: "insensitive" } },
+              { client: { OR: [{ firstName: { contains: q, mode: "insensitive" } }, { lastName: { contains: q, mode: "insensitive" } }, { companyName: { contains: q, mode: "insensitive" } }] } },
+            ],
+          }
+        : {}),
+    },
+    orderBy: { updatedAt: "desc" },
+    include: { client: true },
+    take: 100,
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">Estimates</h1>
+        <Link href="/estimates/new" className={buttonVariants()}><Plus className="h-4 w-4" /> New</Link>
+      </div>
+
+      <form className="flex gap-2">
+        <input type="hidden" name="f" value={f} />
+        <input name="q" defaultValue={q} placeholder="Search number, title or client…" className="h-10 flex-1 rounded-lg border border-border bg-surface px-3 text-sm" />
+      </form>
+
+      <div className="flex gap-1 overflow-x-auto -mx-4 px-4 pb-1">
+        {filters.map((x) => (
+          <Link
+            key={x.key}
+            href={`/estimates?f=${x.key}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+            className={cn("shrink-0 rounded-full px-3 h-8 inline-flex items-center text-sm", x.key === filter.key ? "bg-primary text-primary-foreground" : "bg-surface border border-border text-muted")}
+          >
+            {x.label}
+          </Link>
+        ))}
+      </div>
+
+      <Card>
+        {estimates.length === 0 ? (
+          <EmptyState title={q ? "No matches" : `No ${filter.key === "all" ? "" : filter.label.toLowerCase() + " "}estimates`} description={q ? "Try a different search." : undefined} />
+        ) : (
+          <ul className="divide-y divide-border">
+            {estimates.map((e) => (
+              <li key={e.id}>
+                <Link href={`/estimates/${e.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-background">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{e.title ?? e.number}</p>
+                    <p className="text-xs text-muted truncate">{e.number} · {clientDisplayName(e.client)} · {e.updatedAt.toLocaleDateString(org.locale, { month: "short", day: "numeric" })}</p>
+                  </div>
+                  <StatusBadge status={e.status} className="hidden sm:inline-flex" />
+                  <span className="sm:hidden text-[10px] text-muted">{statusLabels[e.status]}</span>
+                  <span className="text-sm font-medium tabular-nums w-24 text-right">{formatMoney(Number(e.total), org.currency, org.locale)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
+  );
+}
