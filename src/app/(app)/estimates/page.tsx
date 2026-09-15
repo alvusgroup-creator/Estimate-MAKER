@@ -9,6 +9,8 @@ import { Card, EmptyState } from "@/components/ui/card";
 import { StatusBadge, statusLabels } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import type { DocumentKind, EstimateStatus } from "@/generated/prisma/enums";
+import { EstimateRowMenu } from "@/components/estimates/estimate-row-menu";
+import { DiscoveryHint } from "@/components/ui/discovery-hint";
 
 export const metadata = { title: "Estimates" };
 
@@ -44,7 +46,7 @@ export default async function EstimatesPage({ searchParams }: { searchParams: Pr
         : {}),
     },
     orderBy: { updatedAt: "desc" },
-    include: { client: true },
+    include: { client: true, invoice: { select: { id: true } } },
     take: 100,
   });
 
@@ -59,6 +61,8 @@ export default async function EstimatesPage({ searchParams }: { searchParams: Pr
         <input type="hidden" name="f" value={f} />
         <input name="q" defaultValue={q} placeholder="Search number, title or client…" className="h-10 flex-1 rounded-lg border border-border bg-surface px-3 text-sm" />
       </form>
+
+      <DiscoveryHint />
 
       <div className="flex gap-1 overflow-x-auto -mx-4 px-4 pb-1">
         {filters.map((x) => (
@@ -78,7 +82,7 @@ export default async function EstimatesPage({ searchParams }: { searchParams: Pr
         ) : (
           <ul className="divide-y divide-border">
             {estimates.map((e) => (
-              <li key={e.id}>
+              <EstimateRowMenu as="li" key={e.id} estimate={{ id: e.id, number: e.number, kind: e.kind, status: e.status, publicToken: e.publicToken, invoiceId: e.invoice?.id ?? null, client: { firstName: e.client.firstName, phone: e.client.phone, email: e.client.email } }}>
                 <Link href={`/estimates/${e.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-background">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{e.title ?? e.number}</p>
@@ -88,7 +92,7 @@ export default async function EstimatesPage({ searchParams }: { searchParams: Pr
                   <span className="sm:hidden text-[10px] text-muted">{statusLabels[e.status]}</span>
                   <span className="text-sm font-medium tabular-nums w-24 text-right">{formatMoney(Number(e.total), org.currency, org.locale)}</span>
                 </Link>
-              </li>
+              </EstimateRowMenu>
             ))}
           </ul>
         )}

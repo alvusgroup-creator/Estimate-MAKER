@@ -9,13 +9,14 @@ import { archiveClient } from "@/lib/clients/actions";
 import { Card, CardBody, CardHeader, CardTitle, EmptyState } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { EstimateRowMenu } from "@/components/estimates/estimate-row-menu";
 
 export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { orgId, org } = await requireOrg();
   const client = await prisma.client.findFirst({
     where: { id, organizationId: orgId },
-    include: { estimates: { orderBy: { updatedAt: "desc" } } },
+    include: { estimates: { orderBy: { updatedAt: "desc" }, include: { invoice: { select: { id: true } } } } },
   });
   if (!client) notFound();
 
@@ -55,7 +56,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           ) : (
             <ul className="divide-y divide-border">
               {client.estimates.map((e) => (
-                <li key={e.id}>
+                <EstimateRowMenu as="li" key={e.id} estimate={{ id: e.id, number: e.number, kind: e.kind, status: e.status, publicToken: e.publicToken, invoiceId: e.invoice?.id ?? null, client: { firstName: client.firstName, phone: client.phone, email: client.email } }}>
                   <Link href={`/estimates/${e.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-background">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{e.title ?? e.number}</p>
@@ -64,7 +65,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                     <StatusBadge status={e.status} />
                     <span className="text-sm font-medium tabular-nums w-24 text-right">{money(e.total)}</span>
                   </Link>
-                </li>
+                </EstimateRowMenu>
               ))}
             </ul>
           )}

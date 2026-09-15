@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { CopyPlus, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { ContextMenu } from "@/components/ui/context-menu";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Card, EmptyState } from "@/components/ui/card";
@@ -18,6 +19,7 @@ export function ServicesManager({ initial, currency, locale, startNew }: { initi
   const [items, setItems] = useState(initial);
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<string | "new" | null>(startNew ? "new" : null);
+  const [duplicating, setDuplicating] = useState<ServiceItemDTO | null>(null);
 
   const categories = useMemo(() => [...new Set(items.map((i) => i.category ?? "Other"))].sort(), [items]);
   const filtered = useMemo(() => {
@@ -49,6 +51,14 @@ export function ServicesManager({ initial, currency, locale, startNew }: { initi
       {editing === "new" && (
         <ServiceEditor draft={empty} categories={categories} onCancel={() => setEditing(null)} onSaved={(i) => { upsert(i); setEditing(null); }} />
       )}
+      {duplicating && (
+        <ServiceEditor
+          draft={{ name: `${duplicating.name} (copy)`, description: duplicating.description ?? "", category: duplicating.category ?? "", unit: duplicating.unit, unitPrice: String(duplicating.unitPrice), taxable: duplicating.taxable, isMaterial: false }}
+          categories={categories}
+          onCancel={() => setDuplicating(null)}
+          onSaved={(i) => { upsert(i); setDuplicating(null); }}
+        />
+      )}
 
       {grouped.length === 0 ? (
         <Card><EmptyState title={q ? "No matches" : "No services yet"} description={q ? undefined : "Add the services you quote most. They become one-tap line items in the estimate builder."} /></Card>
@@ -71,7 +81,17 @@ export function ServicesManager({ initial, currency, locale, startNew }: { initi
                       />
                     </li>
                   ) : (
-                    <li key={s.id}>
+                    <ContextMenu
+                      as="li"
+                      key={s.id}
+                      items={[
+                        { type: "label", label: s.name },
+                        { label: "Edit", icon: Pencil, onSelect: () => setEditing(s.id) },
+                        { label: "Duplicate", icon: CopyPlus, onSelect: () => setDuplicating(s) },
+                        { type: "separator" },
+                        { label: "Remove from catalog", icon: Trash2, danger: true, onSelect: () => { if (confirm(`Remove "${s.name}"? Existing estimates keep their lines.`)) archiveService(s.id).then(() => remove(s.id)); } },
+                      ]}
+                    >
                       <button type="button" onClick={() => setEditing(s.id)} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-background">
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">{s.name}</p>
@@ -82,7 +102,7 @@ export function ServicesManager({ initial, currency, locale, startNew }: { initi
                         </span>
                         <Pencil className="h-4 w-4 text-muted/60" />
                       </button>
-                    </li>
+                    </ContextMenu>
                   ),
                 )}
               </ul>

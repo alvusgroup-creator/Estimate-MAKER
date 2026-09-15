@@ -8,6 +8,7 @@ import { clientDisplayName, daysFromNow } from "@/lib/utils";
 import { Card, CardBody, CardHeader, CardTitle, EmptyState } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { EstimateRowMenu } from "@/components/estimates/estimate-row-menu";
 
 export const metadata = { title: "Home" };
 
@@ -21,7 +22,7 @@ export default async function DashboardPage() {
       where: { organizationId: orgId },
       orderBy: { updatedAt: "desc" },
       take: 8,
-      include: { client: true },
+      include: { client: true, invoice: { select: { id: true } } },
     }),
     prisma.estimate.aggregate({
       where: { organizationId: orgId, kind: "ESTIMATE", status: { in: ["SENT", "VIEWED"] } },
@@ -77,7 +78,7 @@ export default async function DashboardPage() {
         ) : (
           <ul className="divide-y divide-border">
             {recent.map((e) => (
-              <li key={e.id}>
+              <EstimateRowMenu as="li" key={e.id} estimate={{ id: e.id, number: e.number, kind: e.kind, status: e.status, publicToken: e.publicToken, invoiceId: e.invoice?.id ?? null, client: { firstName: e.client.firstName, phone: e.client.phone, email: e.client.email } }}>
                 <Link href={`/estimates/${e.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-background">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{e.title ?? e.number}</p>
@@ -88,7 +89,7 @@ export default async function DashboardPage() {
                   <StatusBadge status={e.status} />
                   <span className="text-sm font-medium tabular-nums w-24 text-right">{money(e.total)}</span>
                 </Link>
-              </li>
+              </EstimateRowMenu>
             ))}
           </ul>
         )}

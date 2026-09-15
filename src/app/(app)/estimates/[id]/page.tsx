@@ -8,6 +8,7 @@ import { toOrgBranding } from "@/lib/estimates/dto";
 import { EstimateDocument } from "@/components/templates/estimate-document";
 import { EstimateActions } from "@/components/estimates/estimate-actions";
 import { AiPanel } from "@/components/estimates/ai-panel";
+import { DocumentMenu } from "@/components/estimates/document-menu";
 import { StatusBadge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +44,7 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
       </div>
 
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:items-start space-y-4 lg:space-y-0">
+        <DocumentMenu estimate={{ id: estimate.id, number: estimate.number, kind: estimate.kind, status: estimate.status, publicToken: estimate.publicToken, invoiceId: estimate.invoiceId, client: { firstName: estimate.client.firstName, phone: estimate.client.phone, email: estimate.client.email } }}>
         <div className="rounded-xl border border-border overflow-hidden shadow-sm bg-white">
           <EstimateDocument
             template={estimate.template}
@@ -55,6 +57,7 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
             }}
           />
         </div>
+        </DocumentMenu>
 
         <div className="space-y-4">
           <EstimateActions estimate={estimate} publicUrl={publicUrl} />

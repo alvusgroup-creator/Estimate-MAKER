@@ -4,7 +4,9 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useFieldArray, useForm, useWatch, type Control, type UseFormRegister } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronDown, Eye, GripVertical, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BookmarkPlus, ChevronDown, CopyPlus, Eye, GripVertical, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { ContextMenu, type MenuItem } from "@/components/ui/context-menu";
+import { saveService } from "@/lib/services/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +37,9 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
   const [serverError, setServerError] = useState<string | null>(null);
   const [clients, setClients] = useState(initialClients);
   const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
+  const [catalogLocal, setCatalogLocal] = useState(catalog);
+  const [toast, setToast] = useState<string | null>(null);
+  const notify = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 1800); };
 
   const defaults: EstimateFormInput = estimate
     ? {
@@ -208,16 +213,35 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
             <span className="text-xs text-muted">{lines.fields.length} item{lines.fields.length === 1 ? "" : "s"}</span>
           </CardHeader>
           <CardBody className="space-y-3">
-            <CatalogSearch catalog={catalog} onPick={addFromCatalog} onBlank={addBlank} />
+            <CatalogSearch catalog={catalogLocal} onPick={addFromCatalog} onBlank={addBlank} />
             {errors.lineItems?.root?.message || (typeof errors.lineItems?.message === "string" && errors.lineItems.message) ? (
               <p className="text-xs text-danger">{errors.lineItems.root?.message ?? errors.lineItems.message}</p>
             ) : null}
             <div className="space-y-2">
               {lines.fields.map((f, i) => (
-                <LineRow key={f.id} index={i} control={control} register={register} onRemove={() => lines.remove(i)} lineTotal={totals.lineTotals[i] ?? 0} money={money} error={errors.lineItems?.[i]} />
+                <LineRow
+                  key={f.id}
+                  index={i}
+                  count={lines.fields.length}
+                  control={control}
+                  register={register}
+                  onRemove={() => lines.remove(i)}
+                  onDuplicate={() => { const l = values.lineItems?.[i]; if (l) lines.insert(i + 1, { ...(l as (typeof defaults.lineItems)[number]), serviceItemId: l.serviceItemId ?? null }); }}
+                  onMove={(dir) => lines.move(i, i + dir)}
+                  onSaveToCatalog={async () => {
+                    const l = values.lineItems?.[i];
+                    if (!l?.name) return notify("Give the line a name first");
+                    const r = await saveService(null, { name: l.name, description: l.description ?? null, category: null, unit: l.unit ?? "EACH", unitPrice: Number(l.unitPrice) || 0, taxable: !!l.taxable, isMaterial: false });
+                    if (r.ok) { setCatalogLocal((c) => [r.item, ...c]); setValue(`lineItems.${i}.serviceItemId`, r.item.id); notify(`"${r.item.name}" saved to your catalog`); } else notify(r.error);
+                  }}
+                  lineTotal={totals.lineTotals[i] ?? 0}
+                  money={money}
+                  error={errors.lineItems?.[i]}
+                />
               ))}
             </div>
             {lines.fields.length === 0 && <p className="text-sm text-muted text-center py-6">Search your services above or add a blank line.</p>}
+            {lines.fields.length > 0 && <p className="text-[11px] text-muted text-center hidden sm:block">Right-click a line to duplicate, reorder or save it to your catalog · ⌘D duplicates</p>}
           </CardBody>
         </Card>
 
@@ -318,6 +342,7 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
         </div>
         {serverError && <p className="px-4 pb-2 text-xs text-danger">{serverError}</p>}
       </div>
+      {toast && <div className="fixed left-1/2 -translate-x-1/2 bottom-36 md:bottom-20 z-50 rounded-full bg-foreground text-background text-sm px-4 py-2 shadow-lg animate-in-menu">{toast}</div>}
       <div className="h-20" />
     </form>
   );
@@ -325,21 +350,46 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
 
 /* ───────────────────────── pieces ───────────────────────── */
 
-function LineRow({ index, control, register, onRemove, lineTotal, money, error }: {
+function LineRow({ index, count, control, register, onRemove, onDuplicate, onMove, onSaveToCatalog, lineTotal, money, error }: {
   index: number;
+  count: number;
   control: Control<EstimateFormInput>;
   register: UseFormRegister<EstimateFormInput>;
   onRemove: () => void;
+  onDuplicate: () => void;
+  onMove: (dir: -1 | 1) => void;
+  onSaveToCatalog: () => void;
   lineTotal: number;
   money: (n: number) => string;
   error?: { name?: { message?: string } };
 }) {
   const [open, setOpen] = useState(false);
   const desc = useWatch({ control, name: `lineItems.${index}.description` });
+  const serviceItemId = useWatch({ control, name: `lineItems.${index}.serviceItemId` });
+  const menu: MenuItem[] = [
+    { type: "label", label: `Line ${index + 1}` },
+    { label: "Duplicate line", icon: CopyPlus, onSelect: onDuplicate, hint: "⌘D" },
+    { label: "Move up", icon: ArrowUp, onSelect: () => onMove(-1), disabled: index === 0 },
+    { label: "Move down", icon: ArrowDown, onSelect: () => onMove(1), disabled: index === count - 1 },
+    { type: "separator" },
+    { label: serviceItemId ? "Already in catalog" : "Save to catalog", icon: BookmarkPlus, onSelect: onSaveToCatalog, disabled: !!serviceItemId },
+    { label: open || desc ? "Hide description" : "Add description", icon: Pencil, onSelect: () => setOpen((o) => !o) },
+    { type: "separator" },
+    { label: "Remove line", icon: Trash2, danger: true, onSelect: onRemove },
+  ];
   return (
-    <div className="rounded-lg border border-border bg-background/60 p-3">
+    <ContextMenu
+      items={menu}
+      className="block rounded-lg border border-border bg-background/60 p-3"
+      onKeyDown={(e) => {
+        // ⌘D / Ctrl+D duplicates the line you're typing in
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") { e.preventDefault(); onDuplicate(); }
+      }}
+    >
       <div className="flex items-start gap-2">
-        <GripVertical className="h-4 w-4 text-muted/50 mt-3 hidden sm:block" />
+        <button type="button" className="hidden sm:grid h-8 w-6 place-items-center mt-1 text-muted/50 hover:text-muted cursor-context-menu" title="Right-click for options" onClick={(e) => e.currentTarget.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, clientX: e.clientX, clientY: e.clientY }))}>
+          <GripVertical className="h-4 w-4" />
+        </button>
         <div className="flex-1 min-w-0 space-y-2">
           <Input placeholder="Item name" {...register(`lineItems.${index}.name`)} className={cn("font-medium", error?.name && "border-danger")} />
           <div className="grid grid-cols-[1fr_auto_1fr_auto] sm:grid-cols-[80px_90px_1fr_110px] gap-2 items-center">
@@ -362,7 +412,7 @@ function LineRow({ index, control, register, onRemove, lineTotal, money, error }
         </div>
         <Button type="button" variant="ghost" size="icon" onClick={onRemove} aria-label="Remove line"><Trash2 className="h-4 w-4 text-muted" /></Button>
       </div>
-    </div>
+    </ContextMenu>
   );
 }
 
