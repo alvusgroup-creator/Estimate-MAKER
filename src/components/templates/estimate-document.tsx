@@ -336,7 +336,7 @@ function ContactFooter({ org, orgAddr, dark }: { org: OrgBranding; orgAddr: stri
 function CleanLayout(ctx: Ctx) {
   const { org, data, orgAddr, clientAddr, jobAddr, showJob, date } = ctx;
   return (
-    <div className="flex flex-col flex-1 p-8 sm:p-12 print:p-8 gap-9">
+    <div className="flex flex-col flex-1 p-8 sm:p-12 print:p-0 gap-9 print:gap-6">
       <header className="flex items-start justify-between gap-6">
         <div>
           <p className="text-[34px] font-bold tracking-tight leading-none" style={{ color: "var(--doc-primary)" }}>{ctx.heading}</p>
@@ -375,7 +375,7 @@ function BoldLayout(ctx: Ctx) {
   const { org, data, orgAddr, clientAddr, jobAddr, showJob, date } = ctx;
   return (
     <div className="flex flex-col flex-1">
-      <header className="text-white px-8 sm:px-12 print:px-8 py-8" style={{ background: "var(--doc-primary)" }}>
+      <header className="text-white px-8 sm:px-12 print:px-6 py-8 print:py-5" style={{ background: "var(--doc-primary)" }}>
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="bg-white rounded-lg p-2">
@@ -394,7 +394,7 @@ function BoldLayout(ctx: Ctx) {
         </div>
       </header>
 
-      <div className="flex flex-col flex-1 p-8 sm:p-12 print:p-8 gap-8">
+      <div className="flex flex-col flex-1 p-8 sm:p-12 print:px-0 print:py-6 gap-8 print:gap-5">
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="rounded-lg border border-neutral-200 p-4">
             <Party label="Prepared for" name={clientDisplayName(data.client)} lines={clientAddr} contact={[data.client.phone, data.client.email]} />
@@ -416,7 +416,7 @@ function BoldLayout(ctx: Ctx) {
         <Signatures ctx={ctx} variant="bold" />
       </div>
 
-      <div className="px-8 sm:px-12 print:px-8 py-5 text-white mt-auto" style={{ background: "var(--doc-primary)" }}>
+      <div className="px-8 sm:px-12 print:px-6 py-5 print:py-4 text-white mt-auto" style={{ background: "var(--doc-primary)" }}>
         <ContactFooter org={org} orgAddr={orgAddr} dark />
       </div>
     </div>
@@ -428,7 +428,7 @@ function BoldLayout(ctx: Ctx) {
 function ClassicLayout(ctx: Ctx) {
   const { org, data, orgAddr, clientAddr, jobAddr, showJob, date } = ctx;
   return (
-    <div className="flex flex-col flex-1 p-8 sm:p-12 print:p-8 gap-9">
+    <div className="flex flex-col flex-1 p-8 sm:p-12 print:p-0 gap-9 print:gap-6">
       <header className="flex items-start justify-between gap-6 pb-6 border-b-2 border-neutral-800">
         <div className="flex items-start gap-4">
           <Logo org={org} />
