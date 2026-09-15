@@ -19,6 +19,9 @@ export type OrgBranding = {
   logoUrl: string | null;
   primaryColor: string;
   accentColor: string;
+  appColor: string | null;
+  signatureDataUrl: string | null;
+  signatureName: string | null;
   currency: string;
   locale: string;
 };
@@ -96,6 +99,7 @@ export type EstimateDTO = {
   viewCount: number;
   acceptedAt: string | null;
   declinedAt: string | null;
+  signerName: string | null;
   lineItems: LineItemDTO[];
 };
 
@@ -150,6 +154,7 @@ export function toEstimateDTO(e: EstimateWithRelations): EstimateDTO {
     viewCount: e.viewCount,
     acceptedAt: iso(e.acceptedAt),
     declinedAt: iso(e.declinedAt),
+    signerName: e.signerName,
     lineItems: [...e.lineItems]
       .sort((a, b) => a.position - b.position)
       .map((l) => ({
@@ -168,6 +173,6 @@ export function toEstimateDTO(e: EstimateWithRelations): EstimateDTO {
 }
 
 export function toOrgBranding(o: Prisma.OrganizationGetPayload<object>): OrgBranding {
-  const { name, email, phone, website, licenseNo, addressLine1, addressLine2, city, state, postalCode, logoUrl, primaryColor, accentColor, currency, locale } = o;
-  return { name, email, phone, website, licenseNo, addressLine1, addressLine2, city, state, postalCode, logoUrl, primaryColor, accentColor, currency, locale };
+  const { name, email, phone, website, licenseNo, addressLine1, addressLine2, city, state, postalCode, logoUrl, primaryColor, accentColor, appColor, signatureDataUrl, signatureName, currency, locale } = o;
+  return { name, email, phone, website, licenseNo, addressLine1, addressLine2, city, state, postalCode, logoUrl, primaryColor, accentColor, appColor, signatureDataUrl, signatureName, currency, locale };
 }

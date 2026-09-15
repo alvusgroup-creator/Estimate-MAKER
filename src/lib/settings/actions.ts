@@ -25,6 +25,7 @@ const businessSchema = z.object({
 const brandingSchema = z.object({
   primaryColor: hex,
   accentColor: hex,
+  appColor: z.union([z.literal(""), hex]).transform((v) => (v === "" ? null : v)),
   defaultTemplate: z.enum(["CLEAN", "BOLD", "CLASSIC"]),
 });
 
@@ -95,5 +96,22 @@ export async function uploadLogo(_: SettingsState, fd: FormData): Promise<Settin
 export async function removeLogo() {
   const { orgId } = await requireOrg();
   await prisma.organization.update({ where: { id: orgId }, data: { logoUrl: null } });
+  revalidatePath("/", "layout");
+}
+
+const dataUrlSchema = z.string().regex(/^data:image\/png;base64,[A-Za-z0-9+/=]+$/, "Invalid signature image").max(400_000, "Signature image too large");
+
+export async function saveSignature(dataUrl: string, name: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { orgId } = await requireOrg();
+  const p = dataUrlSchema.safeParse(dataUrl);
+  if (!p.success) return { ok: false, error: p.error.issues[0].message };
+  await prisma.organization.update({ where: { id: orgId }, data: { signatureDataUrl: p.data, signatureName: name.slice(0, 120) || null } });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function removeSignature() {
+  const { orgId } = await requireOrg();
+  await prisma.organization.update({ where: { id: orgId }, data: { signatureDataUrl: null, signatureName: null } });
   revalidatePath("/", "layout");
 }

@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { Template } from "@/generated/prisma/enums";
 import type { OrgBranding, ClientDTO } from "@/lib/estimates/dto";
 import { formatMoney } from "@/lib/estimates/calc";
@@ -8,6 +8,7 @@ import { clientDisplayName, formatAddress } from "@/lib/utils";
 /**
  * The document itself. Pure presentational; receives plain numbers/strings so it renders
  * identically in the live editor preview, the public /e/[token] page and print-to-PDF.
+ * Three layouts share one data contract — see CleanLayout / BoldLayout / ClassicLayout below.
  */
 export type DocumentLine = {
   name: string;
@@ -36,11 +37,22 @@ export type DocumentData = {
   depositAmount: number;
   notes?: string | null;
   terms?: string | null;
-  status?: string;
+  // Customer acceptance (public link)
+  acceptedAt?: string | Date | null;
+  signerName?: string | null;
 };
 
-const fmtDate = (d: string | Date, locale: string) =>
-  new Date(d).toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" });
+type Ctx = {
+  org: OrgBranding;
+  data: DocumentData;
+  money: (n: number) => string;
+  date: (d: string | Date) => string;
+  orgAddr: string[];
+  clientAddr: string[];
+  jobAddr: string[];
+  showJob: boolean;
+  pct: string;
+};
 
 export function EstimateDocument({ template, org, data, className }: {
   template: Template;
@@ -48,197 +60,364 @@ export function EstimateDocument({ template, org, data, className }: {
   data: DocumentData;
   className?: string;
 }) {
-  const money = (n: number) => formatMoney(n, org.currency, org.locale);
   const vars = { "--doc-primary": org.primaryColor, "--doc-accent": org.accentColor } as CSSProperties;
-  const orgAddr = formatAddress(org);
-  const jobAddr = formatAddress(data.jobAddress);
   const clientAddr = formatAddress(data.client);
-  const showJob = jobAddr.length > 0 && jobAddr.join() !== clientAddr.join();
+  const jobAddr = formatAddress(data.jobAddress);
+  const ctx: Ctx = {
+    org,
+    data,
+    money: (n) => formatMoney(n, org.currency, org.locale),
+    date: (d) => new Date(d).toLocaleDateString(org.locale, { year: "numeric", month: "short", day: "numeric" }),
+    orgAddr: formatAddress(org),
+    clientAddr,
+    jobAddr,
+    showJob: jobAddr.length > 0 && jobAddr.join() !== clientAddr.join(),
+    pct: (data.taxRate * 100).toFixed(2).replace(/\.?0+$/, ""),
+  };
 
-  const Header = template === "BOLD" ? BoldHeader : template === "CLASSIC" ? ClassicHeader : CleanHeader;
+  const Layout = template === "BOLD" ? BoldLayout : template === "CLASSIC" ? ClassicLayout : CleanLayout;
 
   return (
     <article
       style={vars}
-      className={`doc bg-white text-[#111] text-[13px] leading-snug w-full mx-auto p-6 sm:p-10 print:p-0 ${template === "CLASSIC" ? "font-serif" : ""} ${className ?? ""}`}
+      className={`doc bg-white text-[#111] text-[13px] leading-normal w-full mx-auto min-h-[900px] flex flex-col ${template === "CLASSIC" ? "font-serif" : ""} ${className ?? ""}`}
     >
-      <Header org={org} data={data} orgAddr={orgAddr} fmtDate={(d) => fmtDate(d, org.locale)} />
-
-      {/* Parties */}
-      <section className="grid grid-cols-2 gap-6 mt-8">
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-neutral-500 mb-1">Prepared for</p>
-          <p className="font-semibold">{clientDisplayName(data.client)}</p>
-          {clientAddr.map((l, i) => <p key={i} className="text-neutral-700">{l}</p>)}
-          {data.client.phone && <p className="text-neutral-700">{data.client.phone}</p>}
-          {data.client.email && <p className="text-neutral-700">{data.client.email}</p>}
-        </div>
-        {showJob && (
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-neutral-500 mb-1">Job site</p>
-            {jobAddr.map((l, i) => <p key={i} className="text-neutral-700">{l}</p>)}
-          </div>
-        )}
-      </section>
-
-      {data.title && <h2 className="mt-8 text-base font-semibold">{data.title}</h2>}
-
-      {/* Lines */}
-      <table className="w-full mt-4 border-collapse">
-        <thead>
-          <tr className={template === "BOLD" ? "text-white" : "text-neutral-500"} style={template === "BOLD" ? { background: "var(--doc-primary)" } : undefined}>
-            <th className="text-left font-medium text-[11px] uppercase tracking-wider py-2 px-2">Description</th>
-            <th className="text-right font-medium text-[11px] uppercase tracking-wider py-2 px-2 w-20">Qty</th>
-            <th className="text-right font-medium text-[11px] uppercase tracking-wider py-2 px-2 w-24">Rate</th>
-            <th className="text-right font-medium text-[11px] uppercase tracking-wider py-2 px-2 w-28">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.lines.map((l, i) => (
-            <tr key={i} className={`border-b ${template === "CLASSIC" ? "border-neutral-300" : "border-neutral-200"} ${l.isOptional ? "text-neutral-500" : ""}`}>
-              <td className="py-2.5 px-2 align-top">
-                <p className="font-medium">
-                  {l.name}
-                  {l.isOptional && <span className="ml-2 text-[10px] uppercase tracking-wider">optional</span>}
-                </p>
-                {l.description && <p className="text-neutral-600 whitespace-pre-line">{l.description}</p>}
-              </td>
-              <td className="py-2.5 px-2 text-right align-top tabular-nums whitespace-nowrap">
-                {l.quantity} {UNIT_LABELS[l.unit]}
-              </td>
-              <td className="py-2.5 px-2 text-right align-top tabular-nums">{money(l.unitPrice)}</td>
-              <td className="py-2.5 px-2 text-right align-top tabular-nums font-medium">{money(l.lineTotal)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {/* Totals */}
-      <section className="flex justify-end mt-4">
-        <dl className="w-full max-w-xs space-y-1">
-          <Row label="Subtotal" value={money(data.subtotal)} />
-          {data.discountAmount > 0 && <Row label="Discount" value={`− ${money(data.discountAmount)}`} />}
-          {data.taxAmount > 0 && <Row label={`${data.taxLabel} (${(data.taxRate * 100).toFixed(2).replace(/\.?0+$/, "")}%)`} value={money(data.taxAmount)} />}
-          <div className={`flex justify-between pt-2 mt-2 border-t-2 text-base font-semibold ${template === "CLASSIC" ? "border-neutral-800" : "border-neutral-900"}`}>
-            <dt>Total</dt>
-            <dd className="tabular-nums" style={template !== "CLASSIC" ? { color: "var(--doc-primary)" } : undefined}>{money(data.total)}</dd>
-          </div>
-          {data.depositAmount > 0 && (
-            <div className="flex justify-between text-neutral-700 pt-1">
-              <dt>Deposit due on acceptance</dt>
-              <dd className="tabular-nums font-medium">{money(data.depositAmount)}</dd>
-            </div>
-          )}
-        </dl>
-      </section>
-
-      {(data.notes || data.terms) && (
-        <section className="mt-10 grid gap-6 text-[12px] text-neutral-700">
-          {data.notes && (
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-neutral-500 mb-1">Notes</p>
-              <p className="whitespace-pre-line">{data.notes}</p>
-            </div>
-          )}
-          {data.terms && (
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-neutral-500 mb-1">Terms</p>
-              <p className="whitespace-pre-line">{data.terms}</p>
-            </div>
-          )}
-        </section>
-      )}
-
-      <footer className="mt-10 pt-4 border-t border-neutral-200 text-[11px] text-neutral-500 flex flex-wrap justify-between gap-2">
-        <span>{org.name}{org.licenseNo ? ` · ${org.licenseNo}` : ""}</span>
-        <span>{[org.phone, org.email, org.website].filter(Boolean).join(" · ")}</span>
-      </footer>
+      <Layout {...ctx} />
     </article>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between text-neutral-700">
-      <dt>{label}</dt>
-      <dd className="tabular-nums">{value}</dd>
-    </div>
-  );
-}
+/* ═══════════════════════════ shared pieces ═══════════════════════════ */
 
-type HeaderProps = { org: OrgBranding; data: DocumentData; orgAddr: string[]; fmtDate: (d: string | Date) => string };
-
-function Logo({ org, size = "h-14" }: { org: OrgBranding; size?: string }) {
+function Logo({ org, className = "" }: { org: OrgBranding; className?: string }) {
   if (org.logoUrl) {
+    // Wide and square logos both work: constrain height, let width follow, cap width.
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={org.logoUrl} alt={org.name} className={`${size} w-auto max-w-[180px] object-contain`} />;
+    return <img src={org.logoUrl} alt={org.name} className={`h-16 max-w-[220px] w-auto object-contain object-left ${className}`} />;
   }
   return (
-    <div className={`${size} aspect-square rounded-lg grid place-items-center text-white text-xl font-bold`} style={{ background: "var(--doc-primary)" }}>
+    <div className={`h-16 w-16 rounded-xl grid place-items-center text-white text-2xl font-bold ${className}`} style={{ background: "var(--doc-primary)" }}>
       {org.name.charAt(0)}
     </div>
   );
 }
 
-function Meta({ data, fmtDate, align = "right" }: { data: DocumentData; fmtDate: HeaderProps["fmtDate"]; align?: "left" | "right" }) {
+function Label({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-500 mb-1.5 ${className}`}>{children}</p>;
+}
+
+function Party({ label, name, lines, contact }: { label: string; name?: string; lines: string[]; contact?: (string | null | undefined)[] }) {
   return (
-    <dl className={`text-[12px] ${align === "right" ? "text-right" : ""} space-y-0.5`}>
-      <div><dt className="inline text-neutral-500">Estimate </dt><dd className="inline font-medium">{data.number}</dd></div>
-      <div><dt className="inline text-neutral-500">Date </dt><dd className="inline">{fmtDate(data.issueDate)}</dd></div>
-      {data.expiresAt && <div><dt className="inline text-neutral-500">Valid until </dt><dd className="inline">{fmtDate(data.expiresAt)}</dd></div>}
+    <div className="min-w-0">
+      <Label>{label}</Label>
+      {name && <p className="font-semibold text-[14px] leading-tight">{name}</p>}
+      {lines.map((l, i) => <p key={i} className="text-neutral-700">{l}</p>)}
+      {contact?.filter(Boolean).map((c, i) => <p key={`c${i}`} className="text-neutral-600">{c}</p>)}
+    </div>
+  );
+}
+
+function MetaRows({ data, date, dense }: { data: DocumentData; date: Ctx["date"]; dense?: boolean }) {
+  const rows: [string, string][] = [
+    ["Estimate #", data.number],
+    ["Date", date(data.issueDate)],
+  ];
+  if (data.expiresAt) rows.push(["Valid until", date(data.expiresAt)]);
+  return (
+    <dl className={`grid grid-cols-[auto_1fr] gap-x-6 ${dense ? "gap-y-0.5" : "gap-y-1.5"} text-[12.5px] whitespace-nowrap`}>
+      {rows.map(([k, v]) => (
+        <div key={k} className="contents">
+          <dt className="text-neutral-500">{k}</dt>
+          <dd className="font-semibold text-right">{v}</dd>
+        </div>
+      ))}
     </dl>
   );
 }
 
-function CleanHeader({ org, data, orgAddr, fmtDate }: HeaderProps) {
+function Lines({ ctx, variant }: { ctx: Ctx; variant: "clean" | "bold" | "classic" }) {
+  const { data, money } = ctx;
+  const th = "text-[10.5px] font-semibold uppercase tracking-[0.1em] py-2.5 px-3";
+  const headCls =
+    variant === "bold"
+      ? `${th} text-white`
+      : variant === "classic"
+        ? `${th} text-neutral-800 bg-neutral-100 border border-neutral-400`
+        : `${th} text-neutral-500 border-b-2`;
+  const headStyle = variant === "bold" ? { background: "var(--doc-primary)" } : variant === "clean" ? { borderColor: "var(--doc-primary)" } : undefined;
+  const td = variant === "classic" ? "py-2.5 px-3 border border-neutral-400 align-top" : "py-3 px-3 border-b border-neutral-200 align-top";
+
   return (
-    <header className="flex items-start justify-between gap-6">
-      <div className="flex items-start gap-4">
-        <Logo org={org} />
+    <table className="w-full border-collapse">
+      <thead>
+        <tr style={headStyle}>
+          <th className={`${headCls} text-left`}>Description</th>
+          <th className={`${headCls} text-right w-[88px]`}>Qty</th>
+          <th className={`${headCls} text-right w-[100px]`}>Rate</th>
+          <th className={`${headCls} text-right w-[112px]`}>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.lines.map((l, i) => (
+          <tr key={i} className={`${l.isOptional ? "text-neutral-500" : ""} ${variant === "bold" && i % 2 ? "bg-neutral-50" : ""}`}>
+            <td className={td}>
+              <p className="font-medium leading-snug">
+                {l.name}
+                {l.isOptional && <span className="ml-2 text-[9.5px] uppercase tracking-wider border border-neutral-300 rounded px-1 py-px">optional</span>}
+              </p>
+              {l.description && <p className="text-neutral-600 text-[12px] whitespace-pre-line mt-0.5 leading-snug">{l.description}</p>}
+            </td>
+            <td className={`${td} text-right tabular-nums whitespace-nowrap`}>{l.quantity} <span className="text-neutral-500">{UNIT_LABELS[l.unit]}</span></td>
+            <td className={`${td} text-right tabular-nums`}>{money(l.unitPrice)}</td>
+            <td className={`${td} text-right tabular-nums font-medium`}>{money(l.lineTotal)}</td>
+          </tr>
+        ))}
+        {data.lines.length === 0 && (
+          <tr><td colSpan={4} className={`${td} text-center text-neutral-400 py-8`}>No items yet</td></tr>
+        )}
+      </tbody>
+    </table>
+  );
+}
+
+function Totals({ ctx, variant }: { ctx: Ctx; variant: "clean" | "bold" | "classic" }) {
+  const { data, money, pct } = ctx;
+  const row = "flex justify-between items-baseline py-1 text-neutral-700";
+  return (
+    <div className="w-full max-w-[300px] ml-auto">
+      <div className={row}><span>Subtotal</span><span className="tabular-nums">{money(data.subtotal)}</span></div>
+      {data.discountAmount > 0 && <div className={row}><span>Discount</span><span className="tabular-nums">− {money(data.discountAmount)}</span></div>}
+      {data.taxRate > 0 && <div className={row}><span>{data.taxLabel} ({pct}%)</span><span className="tabular-nums">{money(data.taxAmount)}</span></div>}
+
+      {variant === "classic" ? (
+        <div className="mt-2 flex justify-between items-center border-2 border-neutral-800 px-3 py-2">
+          <span className="text-[15px] font-bold uppercase tracking-wide">Total</span>
+          <span className="text-[18px] font-bold tabular-nums">{money(data.total)}</span>
+        </div>
+      ) : variant === "bold" ? (
+        <div className="mt-2 flex justify-between items-center px-3 py-2.5 text-white rounded-md" style={{ background: "var(--doc-primary)" }}>
+          <span className="text-[13px] font-bold uppercase tracking-wide">Total</span>
+          <span className="text-[18px] font-bold tabular-nums">{money(data.total)}</span>
+        </div>
+      ) : (
+        <div className="mt-2 pt-2.5 border-t-2 flex justify-between items-baseline" style={{ borderColor: "var(--doc-primary)" }}>
+          <span className="text-[14px] font-semibold">Total</span>
+          <span className="text-[20px] font-bold tabular-nums" style={{ color: "var(--doc-primary)" }}>{money(data.total)}</span>
+        </div>
+      )}
+
+      {data.depositAmount > 0 && (
+        <div className={`${row} text-[12.5px] mt-1`}>
+          <span>Deposit due on acceptance</span>
+          <span className="tabular-nums font-semibold text-neutral-900">{money(data.depositAmount)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NotesTerms({ data, cols = false }: { data: DocumentData; cols?: boolean }) {
+  if (!data.notes && !data.terms) return null;
+  return (
+    <section className={`grid gap-6 text-[12px] text-neutral-700 ${cols && data.notes && data.terms ? "sm:grid-cols-2" : ""}`}>
+      {data.notes && (
         <div>
-          <p className="font-semibold text-base">{org.name}</p>
-          {orgAddr.map((l, i) => <p key={i} className="text-neutral-600 text-[12px]">{l}</p>)}
+          <Label>Notes</Label>
+          <p className="whitespace-pre-line leading-relaxed">{data.notes}</p>
+        </div>
+      )}
+      {data.terms && (
+        <div>
+          <Label>Terms &amp; conditions</Label>
+          <p className="whitespace-pre-line leading-relaxed">{data.terms}</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Signature block: contractor (from settings) + customer (from acceptance, or blank line). */
+function Signatures({ ctx, variant }: { ctx: Ctx; variant: "clean" | "bold" | "classic" }) {
+  const { org, data, date } = ctx;
+  const line = variant === "classic" ? "border-neutral-800" : "border-neutral-400";
+  return (
+    <section className="grid grid-cols-2 gap-10 pt-2">
+      <div>
+        <div className={`h-[64px] flex items-end border-b ${line}`}>
+          {org.signatureDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={org.signatureDataUrl} alt="Signature" className="h-14 w-auto max-w-full object-contain object-left-bottom" />
+          ) : null}
+        </div>
+        <div className="flex justify-between mt-1.5 text-[11px] text-neutral-600">
+          <span>{org.signatureName || org.name}</span>
+          <span>Prepared by</span>
         </div>
       </div>
       <div>
-        <p className="text-2xl font-semibold tracking-tight" style={{ color: "var(--doc-primary)" }}>Estimate</p>
-        <Meta data={data} fmtDate={fmtDate} />
+        <div className={`h-[64px] flex items-end border-b ${line}`}>
+          {data.acceptedAt && data.signerName ? (
+            <span className="font-[cursive] italic text-[22px] leading-none pb-1 text-neutral-900">{data.signerName}</span>
+          ) : null}
+        </div>
+        <div className="flex justify-between mt-1.5 text-[11px] text-neutral-600">
+          <span>{data.acceptedAt ? `Accepted ${date(data.acceptedAt)}` : "Customer signature"}</span>
+          <span>{data.acceptedAt ? "Client" : "Date"}</span>
+        </div>
       </div>
-    </header>
+    </section>
   );
 }
 
-function BoldHeader({ org, data, orgAddr, fmtDate }: HeaderProps) {
+function ContactFooter({ org, orgAddr, dark }: { org: OrgBranding; orgAddr: string[]; dark?: boolean }) {
+  const muted = dark ? "text-white/70" : "text-neutral-500";
+  const text = dark ? "text-white" : "text-neutral-800";
   return (
-    <header className="-mx-6 -mt-6 sm:-mx-10 sm:-mt-10 print:m-0 p-6 sm:p-10 text-white" style={{ background: "var(--doc-primary)" }}>
-      <div className="flex items-start justify-between gap-6">
-        <div className="flex items-center gap-4">
-          {org.logoUrl ? <Logo org={org} /> : <div className="h-14 aspect-square rounded-lg grid place-items-center text-2xl font-bold" style={{ background: "var(--doc-accent)" }}>{org.name.charAt(0)}</div>}
-          <div>
-            <p className="font-bold text-xl">{org.name}</p>
-            <p className="text-white/70 text-[12px]">{orgAddr.join(" · ")}</p>
+    <footer className={`grid grid-cols-2 sm:grid-cols-3 gap-6 text-[11px] ${dark ? "" : "border-t border-neutral-200"} pt-5 mt-auto`}>
+      <div>
+        <p className={`${muted} uppercase tracking-wider text-[9.5px] mb-1`}>Business</p>
+        <p className={`${text} font-medium`}>{org.name}</p>
+        {orgAddr.map((l, i) => <p key={i} className={muted}>{l}</p>)}
+      </div>
+      <div>
+        <p className={`${muted} uppercase tracking-wider text-[9.5px] mb-1`}>Contact</p>
+        {org.phone && <p className={text}>{org.phone}</p>}
+        {org.email && <p className={text}>{org.email}</p>}
+        {org.website && <p className={text}>{org.website}</p>}
+      </div>
+      {org.licenseNo && (
+        <div>
+          <p className={`${muted} uppercase tracking-wider text-[9.5px] mb-1`}>License</p>
+          <p className={text}>{org.licenseNo}</p>
+        </div>
+      )}
+    </footer>
+  );
+}
+
+/* ═══════════════════════════ CLEAN (ref 1 / 2) ═══════════════════════════ */
+
+function CleanLayout(ctx: Ctx) {
+  const { org, data, orgAddr, clientAddr, jobAddr, showJob, date } = ctx;
+  return (
+    <div className="flex flex-col flex-1 p-8 sm:p-12 print:p-8 gap-9">
+      <header className="flex items-start justify-between gap-6">
+        <div>
+          <p className="text-[34px] font-bold tracking-tight leading-none" style={{ color: "var(--doc-primary)" }}>Estimate</p>
+          {data.title && <p className="mt-2 text-[14px] text-neutral-600">{data.title}</p>}
+        </div>
+        <Logo org={org} />
+      </header>
+
+      <section className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-8">
+        <Party label="From" name={org.name} lines={orgAddr} contact={[org.phone, org.email]} />
+        <Party label="Prepared for" name={clientDisplayName(data.client)} lines={clientAddr} contact={[data.client.phone, data.client.email]} />
+        <div className="rounded-lg bg-neutral-100 px-5 py-4 min-w-[220px] self-start">
+          <MetaRows data={data} date={date} />
+          {showJob && (
+            <div className="mt-3 pt-3 border-t border-neutral-300">
+              <Label className="mb-0.5">Job site</Label>
+              {jobAddr.map((l, i) => <p key={i} className="text-[12px] text-neutral-700">{l}</p>)}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <Lines ctx={ctx} variant="clean" />
+      <Totals ctx={ctx} variant="clean" />
+      <NotesTerms data={data} cols />
+      <Signatures ctx={ctx} variant="clean" />
+      <ContactFooter org={org} orgAddr={orgAddr} />
+    </div>
+  );
+}
+
+/* ═══════════════════════════ BOLD (ref 3 / 4) ═══════════════════════════ */
+
+function BoldLayout(ctx: Ctx) {
+  const { org, data, orgAddr, clientAddr, jobAddr, showJob, date } = ctx;
+  return (
+    <div className="flex flex-col flex-1">
+      <header className="text-white px-8 sm:px-12 print:px-8 py-8" style={{ background: "var(--doc-primary)" }}>
+        <div className="flex items-start justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="bg-white rounded-lg p-2">
+              <Logo org={org} className="!h-12 !max-w-[180px]" />
+            </div>
+            <div>
+              <p className="font-bold text-[18px] leading-tight">{org.name}</p>
+              <p className="text-white/75 text-[12px] mt-0.5">{[...orgAddr].join(" · ")}</p>
+              <p className="text-white/75 text-[12px]">{[org.phone, org.email].filter(Boolean).join(" · ")}</p>
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-[30px] font-black uppercase tracking-tight leading-none">Estimate</p>
+            <p className="text-white/90 font-semibold text-[14px] mt-2">{data.number}</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-3xl font-black uppercase tracking-tight">Estimate</p>
-          <p className="text-white/80 text-[12px] mt-1">{data.number} · {fmtDate(data.issueDate)}</p>
-          {data.expiresAt && <p className="text-white/80 text-[12px]">Valid until {fmtDate(data.expiresAt)}</p>}
-        </div>
+      </header>
+
+      <div className="flex flex-col flex-1 p-8 sm:p-12 print:p-8 gap-8">
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="rounded-lg border border-neutral-200 p-4">
+            <Party label="Prepared for" name={clientDisplayName(data.client)} lines={clientAddr} contact={[data.client.phone, data.client.email]} />
+          </div>
+          <div className="rounded-lg border border-neutral-200 p-4">
+            <Label>Job site</Label>
+            {(showJob ? jobAddr : clientAddr).length ? (showJob ? jobAddr : clientAddr).map((l, i) => <p key={i} className="text-neutral-700">{l}</p>) : <p className="text-neutral-400">—</p>}
+            {data.title && <p className="mt-2 font-medium">{data.title}</p>}
+          </div>
+          <div className="rounded-lg p-4" style={{ background: "color-mix(in srgb, var(--doc-primary) 8%, white)" }}>
+            <MetaRows data={data} date={date} />
+          </div>
+        </section>
+
+        <Lines ctx={ctx} variant="bold" />
+        <Totals ctx={ctx} variant="bold" />
+        <NotesTerms data={data} cols />
+        <Signatures ctx={ctx} variant="bold" />
       </div>
-    </header>
+
+      <div className="px-8 sm:px-12 print:px-8 py-5 text-white mt-auto" style={{ background: "var(--doc-primary)" }}>
+        <ContactFooter org={org} orgAddr={orgAddr} dark />
+      </div>
+    </div>
   );
 }
 
-function ClassicHeader({ org, data, orgAddr, fmtDate }: HeaderProps) {
+/* ═══════════════════════════ CLASSIC (ref 6) ═══════════════════════════ */
+
+function ClassicLayout(ctx: Ctx) {
+  const { org, data, orgAddr, clientAddr, jobAddr, showJob, date } = ctx;
   return (
-    <header className="text-center border-b-2 border-neutral-800 pb-5">
-      <div className="flex justify-center mb-3"><Logo org={org} size="h-12" /></div>
-      <p className="text-2xl font-semibold tracking-wide">{org.name}</p>
-      <p className="text-neutral-600 text-[12px] mt-1">{[...orgAddr, org.phone, org.licenseNo].filter(Boolean).join("  ·  ")}</p>
-      <div className="mt-5 flex items-end justify-between">
-        <p className="text-lg uppercase tracking-[0.2em]">Estimate</p>
-        <Meta data={data} fmtDate={fmtDate} />
-      </div>
-    </header>
+    <div className="flex flex-col flex-1 p-8 sm:p-12 print:p-8 gap-9">
+      <header className="flex items-start justify-between gap-6 pb-6 border-b-2 border-neutral-800">
+        <div className="flex items-start gap-4">
+          <Logo org={org} />
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-[20px] leading-tight">{org.name}</p>
+            {orgAddr.map((l, i) => <p key={i} className="text-neutral-700">{l}</p>)}
+            {org.phone && <p className="text-neutral-700">{org.phone}</p>}
+            {org.email && <p className="text-neutral-700">{org.email}</p>}
+          </div>
+        </div>
+        <p className="text-[26px] font-bold uppercase tracking-[0.15em] shrink-0">Estimate</p>
+      </header>
+
+      <section className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_auto] gap-8">
+        <Party label="Bill to" name={clientDisplayName(data.client)} lines={clientAddr} contact={[data.client.phone, data.client.email]} />
+        <Party label="Job site" lines={showJob ? jobAddr : clientAddr} />
+        <div className="col-span-2 sm:col-span-1 min-w-[220px]">
+          <MetaRows data={data} date={date} />
+        </div>
+      </section>
+
+      {data.title && <p className="text-[15px] font-semibold -mb-4">{data.title}</p>}
+      <Lines ctx={ctx} variant="classic" />
+      <Totals ctx={ctx} variant="classic" />
+      <Signatures ctx={ctx} variant="classic" />
+      <NotesTerms data={data} />
+      <ContactFooter org={org} orgAddr={orgAddr} />
+    </div>
   );
 }

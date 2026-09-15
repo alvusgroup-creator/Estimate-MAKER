@@ -44,6 +44,11 @@ model Organization {
   primaryColor    String   @default("#111827")
   accentColor     String   @default("#2563EB")
   defaultTemplate Template @default(CLEAN)
+  appColor        String?  // tints the app UI (sidebar, buttons); null = default theme
+
+  // Contractor signature stamped on estimates (drawn or typed, stored as data URL)
+  signatureDataUrl String?
+  signatureName    String?
 
   // Localization / money
   currency String @default("USD") // ISO 4217

@@ -1,6 +1,7 @@
 import { requireOrg } from "@/lib/auth";
 import { toOrgBranding } from "@/lib/estimates/dto";
 import { BrandingForm, BusinessForm, DefaultsForm } from "@/components/settings/settings-forms";
+import { SignaturePad } from "@/components/settings/signature-pad";
 import { logout } from "@/app/(auth)/login/actions";
 import { Button } from "@/components/ui/button";
 
@@ -25,6 +26,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const tabs = [
     { key: "business", label: "Business" },
     { key: "branding", label: "Branding" },
+    { key: "signature", label: "Signature" },
     { key: "defaults", label: "Estimate defaults" },
   ];
 
@@ -40,7 +42,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         ))}
       </div>
 
-      {tab === "branding" ? <BrandingForm org={settings} /> : tab === "defaults" ? <DefaultsForm org={settings} /> : (
+      {tab === "branding" ? <BrandingForm org={settings} /> : tab === "signature" ? <SignaturePad current={org.signatureDataUrl} currentName={org.signatureName} ownerName={user.fullName ?? org.name} /> : tab === "defaults" ? <DefaultsForm org={settings} /> : (
         <>
           <BusinessForm org={settings} />
           <div className="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 text-sm">

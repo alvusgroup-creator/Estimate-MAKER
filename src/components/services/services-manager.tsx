@@ -14,10 +14,10 @@ import { cn } from "@/lib/utils";
 type Draft = { name: string; description: string; category: string; unit: keyof typeof UNIT_LABELS; unitPrice: string; taxable: boolean; isMaterial: boolean };
 const empty: Draft = { name: "", description: "", category: "", unit: "EACH", unitPrice: "", taxable: true, isMaterial: false };
 
-export function ServicesManager({ initial, currency, locale }: { initial: ServiceItemDTO[]; currency: string; locale: string }) {
+export function ServicesManager({ initial, currency, locale, startNew }: { initial: ServiceItemDTO[]; currency: string; locale: string; startNew?: boolean }) {
   const [items, setItems] = useState(initial);
   const [q, setQ] = useState("");
-  const [editing, setEditing] = useState<string | "new" | null>(null);
+  const [editing, setEditing] = useState<string | "new" | null>(startNew ? "new" : null);
 
   const categories = useMemo(() => [...new Set(items.map((i) => i.category ?? "Other"))].sort(), [items]);
   const filtered = useMemo(() => {

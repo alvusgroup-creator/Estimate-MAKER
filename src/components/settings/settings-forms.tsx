@@ -72,6 +72,7 @@ export function BrandingForm({ org }: { org: OrgSettings }) {
   const [logoState, logoAction, logoPending] = useActionState(uploadLogo, undefined);
   const [primary, setPrimary] = useState(org.primaryColor);
   const [accent, setAccent] = useState(org.accentColor);
+  const [appColor, setAppColor] = useState(org.appColor ?? "");
   const [template, setTemplate] = useState<Template>(org.defaultTemplate);
 
   const sample = {
@@ -122,9 +123,16 @@ export function BrandingForm({ org }: { org: OrgSettings }) {
           <CardBody>
             <form action={action} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <ColorField name="primaryColor" label="Primary color" value={primary} onChange={setPrimary} hint="Headings, totals, header" />
-                <ColorField name="accentColor" label="Accent color" value={accent} onChange={setAccent} hint="Highlights" />
+                <ColorField name="primaryColor" label="Document primary" value={primary} onChange={setPrimary} hint="Headings, totals, table header" />
+                <ColorField name="accentColor" label="Document accent" value={accent} onChange={setAccent} hint="Highlights" />
               </div>
+              <Field label="App color" hint="Tints the app itself — sidebar, buttons, active tabs. Leave empty for the default dark theme.">
+                <div className="flex items-center gap-2">
+                  <input type="color" value={appColor || "#111827"} onChange={(e) => setAppColor(e.target.value)} className="h-10 w-12 rounded-lg border border-border bg-surface p-1 cursor-pointer" aria-label="App color picker" />
+                  <Input name="appColor" value={appColor} onChange={(e) => setAppColor(e.target.value)} className="font-mono uppercase" maxLength={7} placeholder="Default" />
+                  {appColor && <Button type="button" variant="ghost" size="sm" onClick={() => setAppColor("")}>Reset</Button>}
+                </div>
+              </Field>
               <Field label="Default template">
                 <div className="grid grid-cols-3 gap-2">
                   {(["CLEAN", "BOLD", "CLASSIC"] as Template[]).map((t) => (
