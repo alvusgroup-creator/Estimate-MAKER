@@ -7,6 +7,7 @@ import { PublicActions } from "./public-actions";
 import { PrintTrigger } from "./print-trigger";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { expireStaleEstimates } from "@/lib/estimates/expire";
+import { createSupabaseServer } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,17 @@ export default async function PublicEstimatePage({ params, searchParams }: { par
     where: { publicToken: token },
     include: { client: true, lineItems: true, photos: true, organization: true, invoice: { select: { id: true } } },
   });
-  if (!raw || raw.status === "DRAFT") notFound();
+  if (!raw) notFound();
+
+  // Drafts are private: only the owning contractor (signed in) can preview them.
+  let ownerPreview = false;
+  if (raw.status === "DRAFT") {
+    const supabase = await createSupabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+    const member = user ? await prisma.user.findFirst({ where: { id: user.id, organizationId: raw.organizationId }, select: { id: true } }) : null;
+    if (!member) notFound();
+    ownerPreview = true;
+  }
 
   // Lazily expire if the customer opens a stale link
   if (raw.kind === "ESTIMATE" && (raw.status === "SENT" || raw.status === "VIEWED") && raw.expiresAt && raw.expiresAt < new Date()) {
@@ -33,7 +44,7 @@ export default async function PublicEstimatePage({ params, searchParams }: { par
 
   // Track the view (first view flips SENT → VIEWED). Never count the contractor's own print view,
   // and count at most one view per IP per hour so refreshes don't inflate the number.
-  if (!print && rateLimit(`view:${token}:${clientIp(hdrs)}`, 1, 3_600_000)) {
+  if (!print && !ownerPreview && rateLimit(`view:${token}:${clientIp(hdrs)}`, 1, 3_600_000)) {
     await prisma.estimate.update({
       where: { id: raw.id },
       data: {
@@ -64,6 +75,9 @@ export default async function PublicEstimatePage({ params, searchParams }: { par
             }}
           />
         </div>
+        {ownerPreview && (
+          <p className="print:hidden mx-4 sm:mx-0 mb-3 rounded-lg bg-amber-100 text-amber-900 text-sm px-4 py-2">Draft preview — only you can see this. Send it to make the link public.</p>
+        )}
         <div className="print:hidden">
           <PublicActions token={token} status={raw.status} kind={raw.kind} canRespond={canRespond} orgName={org.name} orgPhone={org.phone} orgEmail={org.email} />
         </div>

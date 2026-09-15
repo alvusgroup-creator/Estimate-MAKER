@@ -404,7 +404,7 @@ function BoldLayout(ctx: Ctx) {
             {(showJob ? jobAddr : clientAddr).length ? (showJob ? jobAddr : clientAddr).map((l, i) => <p key={i} className="text-neutral-700">{l}</p>) : <p className="text-neutral-400">—</p>}
             {data.title && <p className="mt-2 font-medium">{data.title}</p>}
           </div>
-          <div className="rounded-lg p-4" style={{ background: "color-mix(in srgb, var(--doc-primary) 8%, white)" }}>
+          <div className="rounded-lg p-4 self-start" style={{ background: "color-mix(in srgb, var(--doc-primary) 8%, white)" }}>
             <MetaRows data={data} date={date} />
           </div>
         </section>
