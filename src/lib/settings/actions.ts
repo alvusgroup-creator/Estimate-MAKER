@@ -40,6 +40,13 @@ const defaultsSchema = z.object({
   defaultTerms: z.string().max(5000).transform((s) => s.trim() || null),
 });
 
+const notificationsSchema = z.object({
+  notifyEmail: z.union([z.literal(""), z.string().email("Enter a valid email")]).transform((v) => v.trim() || null),
+  notifyOnViewed: z.coerce.boolean(),
+  notifyOnAccepted: z.coerce.boolean(),
+  notifyOnDeclined: z.coerce.boolean(),
+});
+
 export type SettingsState = { ok?: boolean; error?: string } | undefined;
 
 export async function saveBusiness(_: SettingsState, fd: FormData): Promise<SettingsState> {
@@ -66,6 +73,21 @@ export async function saveDefaults(_: SettingsState, fd: FormData): Promise<Sett
   if (!p.success) return { error: p.error.issues[0].message };
   const { taxRatePct, ...rest } = p.data;
   await prisma.organization.update({ where: { id: orgId }, data: { ...rest, defaultTaxRate: taxRatePct / 100 } });
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
+export async function saveNotifications(_: SettingsState, fd: FormData): Promise<SettingsState> {
+  const { orgId } = await requireOrg();
+  // Unchecked checkboxes are absent from FormData → treat as false
+  const p = notificationsSchema.safeParse({
+    notifyEmail: fd.get("notifyEmail") ?? "",
+    notifyOnViewed: fd.get("notifyOnViewed") === "on",
+    notifyOnAccepted: fd.get("notifyOnAccepted") === "on",
+    notifyOnDeclined: fd.get("notifyOnDeclined") === "on",
+  });
+  if (!p.success) return { error: p.error.issues[0].message };
+  await prisma.organization.update({ where: { id: orgId }, data: p.data });
   revalidatePath("/settings");
   return { ok: true };
 }

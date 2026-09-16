@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { toEstimateDTO, toOrgBranding } from "@/lib/estimates/dto";
 import { EstimateDocument } from "@/components/templates/estimate-document";
@@ -8,6 +9,7 @@ import { PrintTrigger } from "./print-trigger";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { expireStaleEstimates } from "@/lib/estimates/expire";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { notifyContractor } from "@/lib/email/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +56,8 @@ export default async function PublicEstimatePage({ params, searchParams }: { par
         events: { create: { type: "VIEWED", metadata: { ua: hdrs.get("user-agent")?.slice(0, 200) ?? null } } },
       },
     });
+    // Only the first open emails the contractor — later views just bump the counter
+    if (!raw.viewedAt) after(() => notifyContractor(raw.id, "VIEWED"));
   }
 
   const estimate = toEstimateDTO(raw);

@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { emailEnabled } from "@/lib/email/send";
 
 export default async function EstimatePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -60,7 +61,7 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
         </DocumentMenu>
 
         <div className="space-y-4">
-          <EstimateActions estimate={estimate} publicUrl={publicUrl} />
+          <EstimateActions estimate={estimate} publicUrl={publicUrl} emailEnabled={emailEnabled()} />
           <AiPanel estimateId={estimate.id} />
           <Card>
             <CardHeader><CardTitle>Activity</CardTitle></CardHeader>
@@ -68,7 +69,10 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
               <ul className="divide-y divide-border text-sm">
                 {events.map((ev) => (
                   <li key={ev.id} className="px-4 py-2 flex justify-between gap-3">
-                    <span className="capitalize">{ev.type.toLowerCase().replace("_", " ")}</span>
+                    <span className="min-w-0 truncate">
+                      <span className="capitalize">{ev.type.toLowerCase().replace("_", " ")}</span>
+                      {ev.type === "EMAILED" && typeof (ev.metadata as { to?: unknown } | null)?.to === "string" && <span className="text-muted"> · {(ev.metadata as { to: string }).to}</span>}
+                    </span>
                     <time className="text-muted text-xs whitespace-nowrap">{ev.createdAt.toLocaleString(org.locale, { dateStyle: "medium", timeStyle: "short" })}</time>
                   </li>
                 ))}

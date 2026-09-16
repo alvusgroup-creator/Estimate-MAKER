@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { EstimateDocument } from "@/components/templates/estimate-document";
-import { removeLogo, saveBranding, saveBusiness, saveDefaults, uploadLogo, type SettingsState } from "@/lib/settings/actions";
+import { removeLogo, saveBranding, saveBusiness, saveDefaults, saveNotifications, uploadLogo, type SettingsState } from "@/lib/settings/actions";
 import type { OrgBranding } from "@/lib/estimates/dto";
 import type { Template } from "@/generated/prisma/enums";
 import { cn, daysFromNow } from "@/lib/utils";
@@ -195,6 +195,43 @@ export function DefaultsForm({ org }: { org: OrgSettings }) {
           </Field>
           <Field label="Default notes to customer"><Textarea name="defaultNotes" defaultValue={org.defaultNotes ?? ""} /></Field>
           <Field label="Default terms"><Textarea name="defaultTerms" defaultValue={org.defaultTerms ?? ""} className="min-h-[140px]" /></Field>
+          <SaveRow state={state} pending={pending} />
+        </form>
+      </CardBody>
+    </Card>
+  );
+}
+
+export function NotificationsForm({ org, loginEmail, emailEnabled }: {
+  org: { notifyEmail: string | null; notifyOnViewed: boolean; notifyOnAccepted: boolean; notifyOnDeclined: boolean };
+  loginEmail: string;
+  emailEnabled: boolean;
+}) {
+  const [state, action, pending] = useActionState(saveNotifications, undefined);
+  const rows = [
+    { name: "notifyOnViewed", label: "Customer opened the estimate", hint: "Only the first time — a good moment to follow up.", on: org.notifyOnViewed },
+    { name: "notifyOnAccepted", label: "Customer accepted", hint: "Includes who signed and the total.", on: org.notifyOnAccepted },
+    { name: "notifyOnDeclined", label: "Customer declined", hint: "Includes their reason, if they gave one.", on: org.notifyOnDeclined },
+  ];
+  return (
+    <Card>
+      <CardHeader><CardTitle>Email notifications</CardTitle></CardHeader>
+      <CardBody>
+        {!emailEnabled && (
+          <p className="mb-4 rounded-lg bg-amber-100 text-amber-900 text-sm px-3 py-2">Email sending isn&apos;t configured on this server yet (missing <code>RESEND_API_KEY</code>). Your preferences are saved and will apply once it is.</p>
+        )}
+        <form action={action} className="space-y-4">
+          <Field label="Send notifications to" hint={`Leave blank to use your login email (${loginEmail}).`}>
+            <Input name="notifyEmail" type="email" defaultValue={org.notifyEmail ?? ""} placeholder={loginEmail} />
+          </Field>
+          <div className="space-y-2">
+            {rows.map((r) => (
+              <label key={r.name} className="flex items-start gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-background">
+                <input type="checkbox" name={r.name} defaultChecked={r.on} className="mt-0.5 h-4 w-4 accent-primary" />
+                <span className="text-sm"><span className="font-medium">{r.label}</span><span className="block text-xs text-muted">{r.hint}</span></span>
+              </label>
+            ))}
+          </div>
           <SaveRow state={state} pending={pending} />
         </form>
       </CardBody>

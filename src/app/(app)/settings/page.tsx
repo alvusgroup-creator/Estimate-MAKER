@@ -1,9 +1,10 @@
 import { requireOrg } from "@/lib/auth";
 import { toOrgBranding } from "@/lib/estimates/dto";
-import { BrandingForm, BusinessForm, DefaultsForm } from "@/components/settings/settings-forms";
+import { BrandingForm, BusinessForm, DefaultsForm, NotificationsForm } from "@/components/settings/settings-forms";
 import { SignaturePad } from "@/components/settings/signature-pad";
 import { logout } from "@/app/(auth)/login/actions";
 import { Button } from "@/components/ui/button";
+import { emailEnabled } from "@/lib/email/send";
 
 export const metadata = { title: "Settings" };
 
@@ -28,6 +29,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     { key: "branding", label: "Branding" },
     { key: "signature", label: "Signature" },
     { key: "defaults", label: "Estimate defaults" },
+    { key: "notifications", label: "Notifications" },
   ];
 
   return (
@@ -42,7 +44,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         ))}
       </div>
 
-      {tab === "branding" ? <BrandingForm org={settings} /> : tab === "signature" ? <SignaturePad current={org.signatureDataUrl} currentName={org.signatureName} ownerName={user.fullName ?? org.name} /> : tab === "defaults" ? <DefaultsForm org={settings} /> : (
+      {tab === "branding" ? <BrandingForm org={settings} /> : tab === "signature" ? <SignaturePad current={org.signatureDataUrl} currentName={org.signatureName} ownerName={user.fullName ?? org.name} /> : tab === "defaults" ? <DefaultsForm org={settings} /> : tab === "notifications" ? <NotificationsForm org={{ notifyEmail: org.notifyEmail, notifyOnViewed: org.notifyOnViewed, notifyOnAccepted: org.notifyOnAccepted, notifyOnDeclined: org.notifyOnDeclined }} loginEmail={user.email} emailEnabled={emailEnabled()} /> : (
         <>
           <BusinessForm org={settings} />
           <div className="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 text-sm">

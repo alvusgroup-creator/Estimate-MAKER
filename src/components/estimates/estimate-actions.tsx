@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { convertToInvoice, deleteEstimate, duplicateEstimate, markInvoicePaid, setEstimateStatus } from "@/lib/estimates/actions";
 import type { EstimateDTO } from "@/lib/estimates/dto";
+import { EmailDialog } from "./email-dialog";
 
-export function EstimateActions({ estimate, publicUrl }: { estimate: EstimateDTO; publicUrl: string }) {
+export function EstimateActions({ estimate, publicUrl, emailEnabled }: { estimate: EstimateDTO; publicUrl: string; emailEnabled: boolean }) {
   const [pending, start] = useTransition();
   const [copied, setCopied] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
   const s = estimate.status;
   const inv = estimate.kind === "INVOICE";
   const docWord = inv ? "invoice" : "estimate";
@@ -36,10 +38,17 @@ export function EstimateActions({ estimate, publicUrl }: { estimate: EstimateDTO
           <a href={smsHref} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm font-medium hover:bg-background" onClick={() => s === "DRAFT" && start(() => setEstimateStatus(estimate.id, "SENT"))}>
             <Send className="h-4 w-4" /> Text
           </a>
-          <a href={mailHref} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm font-medium hover:bg-background" onClick={() => s === "DRAFT" && start(() => setEstimateStatus(estimate.id, "SENT"))}>
-            <Send className="h-4 w-4" /> Email
-          </a>
+          {emailEnabled ? (
+            <button type="button" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm font-medium hover:bg-background" onClick={() => setEmailOpen((o) => !o)}>
+              <Send className="h-4 w-4" /> Email
+            </button>
+          ) : (
+            <a href={mailHref} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm font-medium hover:bg-background" onClick={() => s === "DRAFT" && start(() => setEstimateStatus(estimate.id, "SENT"))}>
+              <Send className="h-4 w-4" /> Email
+            </a>
+          )}
         </div>
+        {emailOpen && <EmailDialog estimateId={estimate.id} kind={estimate.kind} number={estimate.number} defaultTo={estimate.client.email} firstName={estimate.client.firstName} onClose={() => setEmailOpen(false)} />}
         <div className="grid grid-cols-2 gap-2">
           <a href={publicUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-medium hover:bg-black/5">
             <ExternalLink className="h-4 w-4" /> Open link

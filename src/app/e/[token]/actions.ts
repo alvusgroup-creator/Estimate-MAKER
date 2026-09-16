@@ -1,9 +1,11 @@
 "use server";
 
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { notifyContractor } from "@/lib/email/notify";
 
 /**
  * Customer-side response from the public link. No auth — the token is the credential.
@@ -38,6 +40,9 @@ export async function respondToEstimate(
         ? { status: "ACCEPTED", acceptedAt: new Date(), signerName, signedIp: ip, events: { create: { type: "ACCEPTED", metadata: { by: "customer", signerName, ip } } } }
         : { status: "DECLINED", declinedAt: new Date(), declineReason: input.reason?.trim() || null, events: { create: { type: "DECLINED", metadata: { by: "customer", reason: input.reason?.trim() || null } } } },
   });
+
+  // Email the contractor once the customer's response has been sent back
+  after(() => notifyContractor(e.id, decision, { signerName, reason: input.reason?.trim() || null }));
 
   revalidatePath(`/estimates/${e.id}`);
   revalidatePath("/estimates");

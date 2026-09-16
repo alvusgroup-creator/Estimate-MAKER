@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { computeTotals } from "./calc";
 import { estimateFormSchema, type EstimateFormValues } from "./schemas";
 import type { EstimateStatus } from "@/generated/prisma/enums";
+import { emailEnabled, sendEmail } from "@/lib/email/send";
+import { customerDocumentEmail } from "@/lib/email/templates";
 
 export type SaveResult = { ok: true; id: string } | { ok: false; error: string };
 
@@ -328,4 +330,56 @@ export async function markInvoicePaid(id: string, paid: boolean) {
   revalidatePath(`/estimates/${id}`);
   revalidatePath("/estimates");
   revalidatePath("/dashboard");
+}
+
+/**
+ * Send the document to the customer by email (Resend) with the public link.
+ * Marks a draft as SENT and records an EMAILED event with the recipient.
+ */
+export async function emailEstimate(
+  id: string,
+  input: { to: string; message?: string },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { orgId, org } = await requireOrg();
+  if (!emailEnabled()) return { ok: false, error: "Email sending is not configured yet." };
+
+  const to = input.to.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, error: "Enter a valid email address." };
+  const message = (input.message ?? "").trim().slice(0, 2000) || null;
+
+  const e = await prisma.estimate.findFirst({
+    where: { id, organizationId: orgId },
+    select: { id: true, number: true, kind: true, title: true, status: true, total: true, currency: true, expiresAt: true, dueDate: true, publicToken: true, client: { select: { firstName: true, email: true } } },
+  });
+  if (!e) return { ok: false, error: "Not found" };
+  if (e.status === "EXPIRED") return { ok: false, error: "This estimate has expired — reopen it or duplicate it first." };
+
+  const mail = customerDocumentEmail({
+    doc: {
+      number: e.number, kind: e.kind, title: e.title, total: Number(e.total), currency: e.currency, locale: org.locale,
+      publicUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/e/${e.publicToken}`, expiresAt: e.expiresAt, dueDate: e.dueDate,
+    },
+    org: { name: org.name, phone: org.phone, email: org.email, primaryColor: org.primaryColor },
+    firstName: e.client.firstName,
+    message,
+  });
+  const r = await sendEmail({ to, ...mail, fromName: org.name, replyTo: org.email });
+  if (!r.ok) return { ok: false, error: `Email failed: ${r.error}` };
+
+  await prisma.$transaction([
+    prisma.estimate.update({
+      where: { id },
+      data: {
+        ...(e.status === "DRAFT" ? { status: "SENT", sentAt: new Date() } : {}),
+        events: { create: { type: "EMAILED", metadata: { to, messageId: r.id } } },
+      },
+    }),
+    // Remember the address on the client if they had none
+    ...(e.client.email ? [] : [prisma.client.updateMany({ where: { estimates: { some: { id } }, organizationId: orgId, email: null }, data: { email: to } })]),
+  ]);
+
+  revalidatePath(`/estimates/${id}`);
+  revalidatePath("/estimates");
+  revalidatePath("/dashboard");
+  return { ok: true };
 }

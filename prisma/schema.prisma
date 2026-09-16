@@ -72,6 +72,12 @@ model Organization {
   nextInvoiceNumber   Int           @default(1001)
   defaultDueDays      Int           @default(14)
 
+  // Email notifications to the contractor (Resend). notifyEmail null = the login email.
+  notifyEmail      String?
+  notifyOnViewed   Boolean @default(true)
+  notifyOnAccepted Boolean @default(true)
+  notifyOnDeclined Boolean @default(true)
+
   // Billing (v1.1 — Stripe)
   plan             Plan    @default(FREE)
   stripeCustomerId String? @unique
@@ -314,6 +320,7 @@ model EstimateLineItem {
 enum EstimateEventType {
   CREATED
   SENT
+  EMAILED  // sent to the customer by email from the app
   VIEWED
   ACCEPTED
   DECLINED
