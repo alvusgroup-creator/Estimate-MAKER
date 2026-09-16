@@ -86,3 +86,9 @@ export const UNIT_LABELS: Record<z.infer<typeof unitEnum>, string> = {
   CUBIC_YD: "cu yd",
   GALLON: "gal",
 };
+
+/** PNG data URL produced by the signature canvas (contractor settings and customer acceptance). */
+export const signatureDataUrlSchema = z
+  .string()
+  .regex(/^data:image\/png;base64,[A-Za-z0-9+/=]+$/, "Invalid signature image")
+  .max(400_000, "Signature image too large");

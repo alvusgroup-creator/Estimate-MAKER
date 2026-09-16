@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { notifyContractor } from "@/lib/email/notify";
+import { signatureDataUrlSchema } from "@/lib/estimates/schemas";
 
 /**
  * Customer-side response from the public link. No auth — the token is the credential.
@@ -14,7 +15,7 @@ import { notifyContractor } from "@/lib/email/notify";
 export async function respondToEstimate(
   token: string,
   decision: "ACCEPTED" | "DECLINED",
-  input: { signerName?: string; reason?: string },
+  input: { signerName?: string; signatureDataUrl?: string | null; reason?: string },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const h = await headers();
   const ip = clientIp(h);
@@ -31,13 +32,21 @@ export async function respondToEstimate(
   const signerName = input.signerName?.trim() ?? "";
   if (decision === "ACCEPTED" && signerName.length < 2) return { ok: false, error: "Please type your full name." };
 
+  // Drawn signature is optional; the typed name is the legal record either way
+  let signatureDataUrl: string | null = null;
+  if (decision === "ACCEPTED" && input.signatureDataUrl) {
+    const sig = signatureDataUrlSchema.safeParse(input.signatureDataUrl);
+    if (!sig.success) return { ok: false, error: sig.error.issues[0].message };
+    signatureDataUrl = sig.data;
+  }
+
   if (e.kind !== "ESTIMATE") return { ok: false, error: "Invoices cannot be accepted here." };
 
   await prisma.estimate.update({
     where: { id: e.id },
     data:
       decision === "ACCEPTED"
-        ? { status: "ACCEPTED", acceptedAt: new Date(), signerName, signedIp: ip, events: { create: { type: "ACCEPTED", metadata: { by: "customer", signerName, ip } } } }
+        ? { status: "ACCEPTED", acceptedAt: new Date(), signerName, signatureDataUrl, signedIp: ip, events: { create: { type: "ACCEPTED", metadata: { by: "customer", signerName, drawn: !!signatureDataUrl, ip } } } }
         : { status: "DECLINED", declinedAt: new Date(), declineReason: input.reason?.trim() || null, events: { create: { type: "DECLINED", metadata: { by: "customer", reason: input.reason?.trim() || null } } } },
   });
 

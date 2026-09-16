@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireOrg } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { signatureDataUrlSchema } from "@/lib/estimates/schemas";
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex color like #2563EB");
 const opt = (max = 200) => z.string().max(max).transform((s) => s.trim() || null).nullable().optional();
@@ -121,11 +122,10 @@ export async function removeLogo() {
   revalidatePath("/", "layout");
 }
 
-const dataUrlSchema = z.string().regex(/^data:image\/png;base64,[A-Za-z0-9+/=]+$/, "Invalid signature image").max(400_000, "Signature image too large");
 
 export async function saveSignature(dataUrl: string, name: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const { orgId } = await requireOrg();
-  const p = dataUrlSchema.safeParse(dataUrl);
+  const p = signatureDataUrlSchema.safeParse(dataUrl);
   if (!p.success) return { ok: false, error: p.error.issues[0].message };
   await prisma.organization.update({ where: { id: orgId }, data: { signatureDataUrl: p.data, signatureName: name.slice(0, 120) || null } });
   revalidatePath("/", "layout");

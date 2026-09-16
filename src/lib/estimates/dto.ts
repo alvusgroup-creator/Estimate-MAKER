@@ -107,6 +107,7 @@ export type EstimateDTO = {
   acceptedAt: string | null;
   declinedAt: string | null;
   signerName: string | null;
+  signatureDataUrl: string | null;
   lineItems: LineItemDTO[];
   photos: PhotoDTO[];
 };
@@ -168,6 +169,7 @@ export function toEstimateDTO(e: EstimateWithRelations): EstimateDTO {
     acceptedAt: iso(e.acceptedAt),
     declinedAt: iso(e.declinedAt),
     signerName: e.signerName,
+    signatureDataUrl: e.signatureDataUrl,
     lineItems: [...e.lineItems]
       .sort((a, b) => a.position - b.position)
       .map((l) => ({

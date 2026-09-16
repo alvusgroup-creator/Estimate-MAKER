@@ -40,6 +40,7 @@ export type DocumentData = {
   // Customer acceptance (public link)
   acceptedAt?: string | Date | null;
   signerName?: string | null;
+  signatureDataUrl?: string | null; // drawn on the public link; falls back to the typed name
   // Invoice mode
   kind?: "ESTIMATE" | "INVOICE";
   dueDate?: string | Date | null;
@@ -292,12 +293,15 @@ function Signatures({ ctx, variant }: { ctx: Ctx; variant: "clean" | "bold" | "c
       </div>
       <div>
         <div className={`h-[64px] flex items-end border-b ${line}`}>
-          {data.acceptedAt && data.signerName ? (
+          {data.acceptedAt && data.signatureDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={data.signatureDataUrl} alt="Customer signature" className="h-14 w-auto max-w-full object-contain object-left-bottom" />
+          ) : data.acceptedAt && data.signerName ? (
             <span className="font-[cursive] italic text-[22px] leading-none pb-1 text-neutral-900">{data.signerName}</span>
           ) : null}
         </div>
         <div className="flex justify-between mt-1.5 text-[11px] text-neutral-600">
-          <span>{data.acceptedAt ? `Accepted ${date(data.acceptedAt)}` : "Customer signature"}</span>
+          <span>{data.acceptedAt ? `${data.signerName ?? "Client"} · Accepted ${date(data.acceptedAt)}` : "Customer signature"}</span>
           <span>{data.acceptedAt ? "Client" : "Date"}</span>
         </div>
       </div>

@@ -7,9 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { removeSignature, saveSignature } from "@/lib/settings/actions";
 import { cn } from "@/lib/utils";
+import { SIG_H as H, SIG_W as W, SignatureCanvas, clearSignature } from "@/components/ui/signature-canvas";
 
-const W = 600;
-const H = 200;
 const TYPED_FONTS = [
   { id: "caveat", label: "Caveat", css: "'Caveat', cursive" },
   { id: "dancing", label: "Dancing Script", css: "'Dancing Script', cursive" },
@@ -26,8 +25,6 @@ export function SignaturePad({ current, currentName, ownerName }: { current: str
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const drawing = useRef(false);
-  const last = useRef<{ x: number; y: number } | null>(null);
 
   // Load handwriting fonts once (only in the browser, only on this screen)
   useEffect(() => {
@@ -40,44 +37,7 @@ export function SignaturePad({ current, currentName, ownerName }: { current: str
     document.head.appendChild(link);
   }, []);
 
-  const ctx = () => {
-    const c = canvasRef.current!;
-    const g = c.getContext("2d")!;
-    g.lineCap = "round";
-    g.lineJoin = "round";
-    g.lineWidth = 3;
-    g.strokeStyle = "#111";
-    return g;
-  };
-
-  const pos = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H };
-  };
-
-  const down = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    drawing.current = true;
-    last.current = pos(e);
-  };
-  const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!drawing.current || !last.current) return;
-    const p = pos(e);
-    const g = ctx();
-    g.beginPath();
-    g.moveTo(last.current.x, last.current.y);
-    g.lineTo(p.x, p.y);
-    g.stroke();
-    last.current = p;
-    setDirty(true);
-  };
-  const up = () => { drawing.current = false; last.current = null; };
-
-  const clear = () => {
-    const c = canvasRef.current;
-    if (c) c.getContext("2d")!.clearRect(0, 0, W, H);
-    setDirty(false);
-  };
+  const clear = () => { clearSignature(canvasRef.current); setDirty(false); };
 
   /** Rasterize typed text so the document only ever deals with an image. */
   const typedToDataUrl = async () => {
@@ -130,21 +90,7 @@ export function SignaturePad({ current, currentName, ownerName }: { current: str
 
         {mode === "draw" ? (
           <div className="space-y-2">
-            <div className="relative rounded-lg border-2 border-dashed border-border bg-white overflow-hidden touch-none">
-              <canvas
-                ref={canvasRef}
-                width={W}
-                height={H}
-                className="w-full h-auto block cursor-crosshair"
-                onPointerDown={down}
-                onPointerMove={move}
-                onPointerUp={up}
-                onPointerLeave={up}
-                onPointerCancel={up}
-              />
-              <div className="pointer-events-none absolute inset-x-6 bottom-8 border-b border-neutral-300" />
-              {!dirty && <p className="pointer-events-none absolute inset-0 grid place-items-center text-sm text-muted/60">Sign here with your finger or mouse</p>}
-            </div>
+            <SignatureCanvas canvasRef={canvasRef} dirty={dirty} onDirty={() => setDirty(true)} />
             <Button type="button" variant="ghost" size="sm" onClick={clear}><Eraser className="h-4 w-4" /> Clear</Button>
           </div>
         ) : (

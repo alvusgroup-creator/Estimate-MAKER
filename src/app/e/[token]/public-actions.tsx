@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Check, Printer } from "lucide-react";
+import { useRef, useState, useTransition } from "react";
+import { Check, Eraser, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { respondToEstimate } from "./actions";
+import { SignatureCanvas, clearSignature } from "@/components/ui/signature-canvas";
 import type { EstimateStatus } from "@/generated/prisma/enums";
 
 export function PublicActions({ token, status, kind, canRespond, orgName, orgPhone, orgEmail }: {
@@ -21,11 +22,14 @@ export function PublicActions({ token, status, kind, canRespond, orgName, orgPho
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [reason, setReason] = useState("");
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [drawn, setDrawn] = useState(false);
 
   const submit = (decision: "ACCEPTED" | "DECLINED") =>
     start(async () => {
       setError(null);
-      const r = await respondToEstimate(token, decision, { signerName: name, reason });
+      const signatureDataUrl = decision === "ACCEPTED" && drawn ? canvasRef.current?.toDataURL("image/png") : null;
+      const r = await respondToEstimate(token, decision, { signerName: name, signatureDataUrl, reason });
       if (!r.ok) return setError(r.error);
       setMode("done");
     });
@@ -54,6 +58,15 @@ export function PublicActions({ token, status, kind, canRespond, orgName, orgPho
           <p className="font-medium">Accept this estimate</p>
           <p className="text-sm text-neutral-600">Type your full name to confirm. This lets {orgName} schedule the work.</p>
           <Input placeholder="Your full name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-neutral-500">
+              <span>Signature <span className="text-neutral-400">(optional)</span></span>
+              {drawn && (
+                <button type="button" onClick={() => { clearSignature(canvasRef.current); setDrawn(false); }} className="inline-flex items-center gap-1 hover:text-neutral-800"><Eraser className="h-3.5 w-3.5" /> Clear</button>
+              )}
+            </div>
+            <SignatureCanvas canvasRef={canvasRef} dirty={drawn} onDirty={() => setDrawn(true)} placeholder="Sign here with your finger" />
+          </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
             <Button className="bg-green-700 hover:bg-green-800 flex-1" disabled={pending || name.trim().length < 2} onClick={() => submit("ACCEPTED")}>{pending ? "…" : "Confirm acceptance"}</Button>
