@@ -73,7 +73,12 @@ Recomendação: **Connect**, porque "aceitar e já pagar o sinal" é o que difer
 
 ---
 
-## 3. Outras coisas que posso fazer (ordem sugerida)
+## 3. Direção do produto (anotado 2026-09-16)
+
+- **Um app por nicho.** Este aqui é o de **construction** (GC, pintura, drywall, piso, exterior, landscaping). Outros nichos (ex.: limpeza, HVAC, beleza) ganham um clone próprio depois — não vamos colocar seletor de nicho dentro deste código.
+- Consequência prática: catálogo inicial, textos, templates e prompt da IA podem falar a língua da obra sem medo de "genérico demais".
+
+## 4. Outras coisas que posso fazer (ordem sugerida)
 
 | # | Item | Esforço | Por que |
 |---|---|---|---|
