@@ -6,7 +6,7 @@ Estimates profissionais em 2 minutos, do celular, para contractors nos EUA. Mini
 
 - Next.js 16 (App Router) · TypeScript · Tailwind 4
 - Supabase (Auth + Storage para logos) · Postgres via Prisma 7 (`@prisma/adapter-pg`)
-- Zod + react-hook-form · `@react-pdf/renderer` · Anthropic SDK (recomendações)
+- Zod + react-hook-form · print-to-PDF · Anthropic SDK (recomendações) · Vitest
 
 ## Rodar local
 
@@ -49,6 +49,6 @@ src/app/api/ai/recommend      POST { estimateId }
 
 **MVP** — onboarding (logo/cores/dados) · catálogo · clientes · builder com preview ao vivo · 3 templates · PDF + link público · status Draft→Sent→Viewed→Accepted/Declined · duplicar
 
-**v1.1** — Accept & Sign no link público · estimate → invoice · Stripe (plano Pro + deposit online) · recomendações IA com feedback 👍👎
+**v1.1** — ~~Accept no link público~~ · ~~estimate → invoice~~ · ~~recomendações IA com feedback 👍👎~~ · assinatura desenhada no aceite · Stripe (plano Pro + deposit online)
 
 **v2** — Canadá (GST/HST, CAD) · Portugal (IVA, EUR, pt-PT) · multi-usuário
