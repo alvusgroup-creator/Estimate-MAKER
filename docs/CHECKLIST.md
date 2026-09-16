@@ -85,6 +85,7 @@ Recomendação: **Connect**, porque "aceitar e já pagar o sinal" é o que difer
 | 6 | Exportar clientes/estimates em CSV | pequeno | Pedido comum de quem migra de planilha |
 | 7 | Canadá (GST/HST, CAD) — schema já pronto, falta UI de país no onboarding + presets de tax | médio | Roadmap v2 |
 | 8 | Multi-usuário (convidar membro da equipe) | grande | Roadmap v2; schema já é N:1 |
-| 9 | Auditoria de segurança dos server actions (`/security-review`) antes do deploy | pequeno | Todo action deve passar por `requireOrg` e filtrar por `organizationId` |
+| 9 | **Tour guiado no primeiro login** — pop-up step-by-step (ex.: "1. Configure sua marca → 2. Adicione um cliente → 3. Crie seu primeiro estimate → 4. Envie o link"), com progresso salvo na org e opção de pular. Diferente do `/onboarding` atual, que só coleta dados da empresa | médio | Pedido do Felipe em 2026-09-16 |
+| 10 | Auditoria de segurança dos server actions (`/security-review`) antes do deploy | pequeno | Todo action deve passar por `requireOrg` e filtrar por `organizationId` |
 
 Me diga as decisões do item 2 (A, B, C) e eu começo pelo Stripe; se preferir, faço o item 3.1 (deploy) antes, que destrava você testar tudo isso em produção.
