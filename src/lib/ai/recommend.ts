@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY
-const MODEL = process.env.AI_MODEL ?? "claude-opus-5";
+const MODEL = process.env.AI_MODEL ?? "claude-haiku-4-5-20251001";
 
 export const suggestionSchema = z.object({
   suggestions: z
@@ -27,6 +27,7 @@ export const suggestionSchema = z.object({
 });
 
 export type AiSuggestions = z.infer<typeof suggestionSchema>;
+export type AiReview = AiSuggestions & { recommendationId: string };
 
 // Stable text → cacheable prefix. Nothing volatile goes in here.
 const SYSTEM = `You are an estimating advisor for a small US contractor. You review a draft estimate
@@ -115,7 +116,7 @@ export async function recommendForEstimate(orgId: string, estimateId: string) {
 
   const parsed = response.parsed_output ?? { suggestions: [] };
 
-  await prisma.aiRecommendation.create({
+  const rec = await prisma.aiRecommendation.create({
     data: {
       organizationId: orgId,
       estimateId,
@@ -124,7 +125,8 @@ export async function recommendForEstimate(orgId: string, estimateId: string) {
       outputTokens: response.usage.output_tokens,
       suggestions: parsed.suggestions,
     },
+    select: { id: true },
   });
 
-  return parsed;
+  return { ...parsed, recommendationId: rec.id };
 }

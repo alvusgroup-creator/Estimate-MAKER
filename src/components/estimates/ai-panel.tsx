@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
-import type { AiSuggestions } from "@/lib/ai/recommend";
+import type { AiReview } from "@/lib/ai/recommend";
+import { rateRecommendation } from "@/lib/ai/actions";
 
 const typeStyle: Record<string, string> = {
   PRICING: "bg-warning-soft text-warning",
@@ -16,10 +17,12 @@ const typeStyle: Record<string, string> = {
 };
 
 export function AiPanel({ estimateId }: { estimateId: string }) {
-  const [state, setState] = useState<{ loading: boolean; data?: AiSuggestions; error?: string }>({ loading: false });
+  const [state, setState] = useState<{ loading: boolean; data?: AiReview; error?: string }>({ loading: false });
+  const [rating, setRating] = useState<1 | -1 | null>(null);
 
   async function run() {
     setState({ loading: true });
+    setRating(null);
     try {
       const res = await fetch("/api/ai/recommend", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ estimateId }) });
       if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error ?? `Request failed (${res.status})`);
@@ -50,6 +53,30 @@ export function AiPanel({ estimateId }: { estimateId: string }) {
             <p className="text-sm text-muted">{s.detail}</p>
           </div>
         ))}
+        {state.data && state.data.suggestions.length > 0 && (
+          <div className="flex items-center justify-end gap-1 pt-1 text-xs text-muted">
+            <span className="mr-1">{rating ? "Thanks for the feedback" : "Was this useful?"}</span>
+            {([1, -1] as const).map((v) => {
+              const Icon = v === 1 ? ThumbsUp : ThumbsDown;
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  aria-label={v === 1 ? "Useful" : "Not useful"}
+                  aria-pressed={rating === v}
+                  disabled={rating !== null}
+                  onClick={() => {
+                    setRating(v);
+                    void rateRecommendation(state.data!.recommendationId, v);
+                  }}
+                  className={`rounded-md p-1.5 transition-colors hover:bg-black/5 disabled:hover:bg-transparent ${rating === v ? "text-accent" : ""}`}
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
+              );
+            })}
+          </div>
+        )}
       </CardBody>
     </Card>
   );
