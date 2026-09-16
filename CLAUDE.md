@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run dev                          # Next dev server (http://localhost:3000)
-npm run build                        # production build — also the type-check; there is no separate tsc script
+npm run build                        # prisma generate + prisma migrate deploy + next build (same command Vercel runs) — also the type-check
 npm test                             # vitest run — unit tests (src/**/*.test.ts); npm run test:watch for watch mode
 npm run lint                         # eslint (flat config, eslint-config-next core-web-vitals + typescript)
 npx prisma migrate dev --name <n>    # create + apply a migration (uses DIRECT_URL via prisma.config.ts)
