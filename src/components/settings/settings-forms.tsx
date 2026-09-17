@@ -5,7 +5,7 @@ import { Check, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
-import { EstimateDocument } from "@/components/templates/estimate-document";
+import { ScaledDocument } from "@/components/templates/scaled-document";
 import { removeLogo, saveBranding, saveBusiness, saveDefaults, saveNotifications, uploadLogo, type SettingsState } from "@/lib/settings/actions";
 import type { OrgBranding } from "@/lib/estimates/dto";
 import type { Template } from "@/generated/prisma/enums";
@@ -158,9 +158,7 @@ export function BrandingForm({ org }: { org: OrgSettings }) {
 
       <div className="lg:sticky lg:top-6">
         <p className="text-xs font-medium text-muted mb-2 px-1">Live preview</p>
-        <div className="rounded-xl border border-border overflow-hidden shadow-sm origin-top">
-          <EstimateDocument template={template} org={{ ...org, primaryColor: primary, accentColor: accent }} data={sample} />
-        </div>
+        <ScaledDocument className="rounded-xl border border-border overflow-hidden shadow-sm bg-white" template={template} org={{ ...org, primaryColor: primary, accentColor: accent }} data={sample} />
       </div>
     </div>
   );

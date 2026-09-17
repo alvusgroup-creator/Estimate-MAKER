@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Building2, Check, Pencil, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SHELL_PHOTOS, SplitShell } from "@/components/auth/split-shell";
-import { EstimateDocument } from "@/components/templates/estimate-document";
+import { ScaledDocument } from "@/components/templates/scaled-document";
 import type { OrgBranding } from "@/lib/estimates/dto";
 import { TRADES } from "@/lib/trades";
 import { cn, daysFromNow } from "@/lib/utils";
@@ -205,8 +205,9 @@ function DocumentPreview({ name, logoUrl, email }: { name: string; logoUrl: stri
   const [issueDate, expiresAt] = useMemo(() => [new Date(), daysFromNow(30)], []);
   return (
     <div className="absolute inset-0 bg-neutral-100 flex items-center justify-center p-6 lg:p-12 overflow-hidden">
-      <div className="w-[720px] max-w-none shadow-2xl origin-center scale-[0.42] sm:scale-[0.6] lg:scale-[0.72] xl:scale-[0.8]">
-        <EstimateDocument
+      <div className="w-full max-w-[640px]">
+        <ScaledDocument
+          className="shadow-2xl bg-white"
           template="CLEAN"
           org={org}
           data={{

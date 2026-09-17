@@ -96,7 +96,7 @@ export function EstimateDocument({ template, org, data, className }: {
   return (
     <article
       style={vars}
-      className={`doc bg-white text-[#111] text-[13px] leading-normal w-full mx-auto min-h-[900px] flex flex-col ${template === "CLASSIC" ? "font-serif" : ""} ${className ?? ""}`}
+      className={`doc @container bg-white text-[#111] text-[13px] leading-normal w-full mx-auto min-h-[900px] flex flex-col ${template === "CLASSIC" ? "font-serif" : ""} ${className ?? ""}`}
     >
       <Layout {...ctx} />
     </article>
@@ -260,7 +260,7 @@ function Totals({ ctx, variant }: { ctx: Ctx; variant: "clean" | "bold" | "class
 function NotesTerms({ data, cols = false }: { data: DocumentData; cols?: boolean }) {
   if (!data.notes && !data.terms) return null;
   return (
-    <section className={`grid gap-6 text-[12px] text-neutral-700 ${cols && data.notes && data.terms ? "sm:grid-cols-2" : ""}`}>
+    <section className={`grid gap-6 text-[12px] text-neutral-700 ${cols && data.notes && data.terms ? "@xl:grid-cols-2" : ""}`}>
       {data.notes && (
         <div>
           <Label>Notes</Label>
@@ -331,7 +331,7 @@ function ContactFooter({ org, orgAddr, dark }: { org: OrgBranding; orgAddr: stri
   const muted = dark ? "text-white/70" : "text-neutral-500";
   const text = dark ? "text-white" : "text-neutral-800";
   return (
-    <footer className={`grid grid-cols-2 sm:grid-cols-3 gap-6 text-[11px] ${dark ? "" : "border-t border-neutral-200"} pt-5 mt-auto`}>
+    <footer className={`grid grid-cols-2 @xl:grid-cols-3 gap-6 text-[11px] ${dark ? "" : "border-t border-neutral-200"} pt-5 mt-auto`}>
       <div>
         <p className={`${muted} uppercase tracking-wider text-[9.5px] mb-1`}>Business</p>
         <p className={`${text} font-medium`}>{org.name}</p>
@@ -358,7 +358,7 @@ function ContactFooter({ org, orgAddr, dark }: { org: OrgBranding; orgAddr: stri
 function CleanLayout(ctx: Ctx) {
   const { org, data, orgAddr, clientAddr, jobAddr, showJob, date } = ctx;
   return (
-    <div className="flex flex-col flex-1 p-8 sm:p-12 print:p-0 gap-9 print:gap-6">
+    <div className="flex flex-col flex-1 p-6 @xl:p-12 print:p-0 gap-9 print:gap-6">
       <header className="flex items-start justify-between gap-6">
         <div>
           <p className="text-[34px] font-bold tracking-tight leading-none" style={{ color: "var(--doc-primary)" }}>{ctx.heading}</p>
@@ -367,10 +367,10 @@ function CleanLayout(ctx: Ctx) {
         <Logo org={org} />
       </header>
 
-      <section className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-8">
+      <section className="grid grid-cols-1 @xl:grid-cols-[1fr_1fr_auto] gap-6 @xl:gap-8">
         <Party label="From" name={org.name} lines={orgAddr} contact={[org.phone, org.email]} />
         <Party label="Prepared for" name={clientDisplayName(data.client)} lines={clientAddr} contact={[data.client.phone, data.client.email]} />
-        <div className="rounded-lg bg-neutral-100 px-5 py-4 min-w-[220px] self-start">
+        <div className="rounded-lg bg-neutral-100 px-5 py-4 @xl:min-w-[220px] self-start">
           <MetaRows data={data} date={date} />
           {showJob && (
             <div className="mt-3 pt-3 border-t border-neutral-300">
@@ -397,7 +397,7 @@ function BoldLayout(ctx: Ctx) {
   const { org, data, orgAddr, clientAddr, jobAddr, showJob, date } = ctx;
   return (
     <div className="flex flex-col flex-1">
-      <header className="text-white px-8 sm:px-12 print:px-6 py-8 print:py-5" style={{ background: "var(--doc-primary)" }}>
+      <header className="text-white px-6 @xl:px-12 print:px-6 py-8 print:py-5" style={{ background: "var(--doc-primary)" }}>
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="bg-white rounded-lg p-2">
@@ -416,8 +416,8 @@ function BoldLayout(ctx: Ctx) {
         </div>
       </header>
 
-      <div className="flex flex-col flex-1 p-8 sm:p-12 print:px-0 print:py-6 gap-8 print:gap-5">
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="flex flex-col flex-1 p-6 @xl:p-12 print:px-0 print:py-6 gap-8 print:gap-5">
+        <section className="grid grid-cols-1 @xl:grid-cols-3 gap-4 @xl:gap-6">
           <div className="rounded-lg border border-neutral-200 p-4">
             <Party label="Prepared for" name={clientDisplayName(data.client)} lines={clientAddr} contact={[data.client.phone, data.client.email]} />
           </div>
@@ -438,7 +438,7 @@ function BoldLayout(ctx: Ctx) {
         <Signatures ctx={ctx} variant="bold" />
       </div>
 
-      <div className="px-8 sm:px-12 print:px-6 py-5 print:py-4 text-white mt-auto" style={{ background: "var(--doc-primary)" }}>
+      <div className="px-6 @xl:px-12 print:px-6 py-5 print:py-4 text-white mt-auto" style={{ background: "var(--doc-primary)" }}>
         <ContactFooter org={org} orgAddr={orgAddr} dark />
       </div>
     </div>
@@ -450,7 +450,7 @@ function BoldLayout(ctx: Ctx) {
 function ClassicLayout(ctx: Ctx) {
   const { org, data, orgAddr, clientAddr, jobAddr, showJob, date } = ctx;
   return (
-    <div className="flex flex-col flex-1 p-8 sm:p-12 print:p-0 gap-9 print:gap-6">
+    <div className="flex flex-col flex-1 p-6 @xl:p-12 print:p-0 gap-9 print:gap-6">
       <header className="flex items-start justify-between gap-6 pb-6 border-b-2 border-neutral-800">
         <div className="flex items-start gap-4">
           <Logo org={org} />
@@ -464,10 +464,10 @@ function ClassicLayout(ctx: Ctx) {
         <p className="text-[26px] font-bold uppercase tracking-[0.15em] shrink-0">{ctx.heading}</p>
       </header>
 
-      <section className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_auto] gap-8">
+      <section className="grid grid-cols-1 @lg:grid-cols-2 @xl:grid-cols-[1fr_1fr_auto] gap-6 @xl:gap-8">
         <Party label="Bill to" name={clientDisplayName(data.client)} lines={clientAddr} contact={[data.client.phone, data.client.email]} />
         <Party label="Job site" lines={showJob ? jobAddr : clientAddr} />
-        <div className="col-span-2 sm:col-span-1 min-w-[220px]">
+        <div className="@lg:col-span-2 @xl:col-span-1 min-w-[220px]">
           <MetaRows data={data} date={date} />
         </div>
       </section>
