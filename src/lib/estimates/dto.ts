@@ -3,7 +3,7 @@
  * Prisma Decimals become numbers here and nowhere else.
  */
 import type { Prisma } from "@/generated/prisma/client";
-import type { DiscountType, DocumentKind, EstimateStatus, Template, Unit } from "@/generated/prisma/enums";
+import type { DiscountType, DocumentKind, EstimateStatus, PaymentMethod, Template, Unit } from "@/generated/prisma/enums";
 
 export type OrgBranding = {
   name: string;
@@ -65,6 +65,8 @@ export type LineItemDTO = {
 
 export type PhotoDTO = { id?: string; url: string; caption: string | null; showOnDocument: boolean };
 
+export type PaymentDTO = { id: string; amount: number; paidAt: string; method: PaymentMethod | null; note: string | null };
+
 /** A change order as seen from its parent estimate (list card, revised total). */
 export type ChangeOrderSummaryDTO = { id: string; number: string; title: string | null; status: EstimateStatus; total: number; createdAt: string };
 
@@ -109,6 +111,8 @@ export type EstimateDTO = {
   depositType: DiscountType | null;
   depositValue: number | null;
   depositAmount: number;
+  amountPaid: number; // invoices: Σ payments
+  payments: PaymentDTO[];
   publicToken: string;
   sentAt: string | null;
   viewedAt: string | null;
@@ -129,6 +133,7 @@ export const estimateInclude = {
   invoice: { select: { id: true } },
   parentEstimate: { select: { id: true, number: true, title: true, total: true, changeOrders: { where: { status: "ACCEPTED" }, select: { id: true, total: true } } } },
   changeOrders: { orderBy: { createdAt: "asc" }, select: { id: true, number: true, title: true, status: true, total: true, createdAt: true } },
+  payments: { orderBy: { paidAt: "asc" } },
 } satisfies Prisma.EstimateInclude;
 
 type EstimateWithRelations = Prisma.EstimateGetPayload<{ include: typeof estimateInclude }>;
@@ -193,6 +198,8 @@ export function toEstimateDTO(e: EstimateWithRelations): EstimateDTO {
     depositType: e.depositType,
     depositValue: num(e.depositValue),
     depositAmount: Number(e.depositAmount),
+    amountPaid: Number(e.amountPaid),
+    payments: e.payments.map((p) => ({ id: p.id, amount: Number(p.amount), paidAt: p.paidAt.toISOString(), method: p.method, note: p.note })),
     publicToken: e.publicToken,
     sentAt: iso(e.sentAt),
     viewedAt: iso(e.viewedAt),

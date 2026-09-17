@@ -91,7 +91,23 @@ O que foi **pego** da referência, o que foi **fundido** com o nosso e o que foi
 
 Como testar: menu lateral tem Invoices · abrir `/estimates` e trocar o mês · `/invoices?f=unpaid` · `/settings` → clicar em cada linha e voltar · `/settings?tab=upgrade`.
 
-### 1.7 Regressão rápida (nada disso mudou, mas passa por código tocado)
+### 1.7 Pagamentos parciais na fatura + atalho de personalização
+
+Das telas do editor/preview da referência, ficou: **registro de pagamentos** (sinal, parcelas, final → saldo devido) e um atalho **Customize** (ícone de paleta) na página do documento que leva ao Branding, agora com paleta de cores rápidas. Cortado: microfone, tamanho de fonte, espaçamento, etiquetas personalizadas, formato de data, remover fundo do logo. Os balões "toque aqui" são o tour guiado (backlog item 9).
+
+| Item | Como testar |
+|---|---|
+| Fatura tem card **Payments** com "Record payment" (valor já vem com o saldo, data, método, nota) | Abrir uma invoice → registrar R$ parcial → saldo cai, status continua aberto |
+| Registrar o valor restante (ou **Mark as paid**) → status **PAID** automaticamente; apagar um pagamento reabre a fatura | — |
+| "Mark as unpaid" sumiu — agora é apagar o pagamento na lista | — |
+| O sinal do estimate vira um pagamento "Deposit" quando converte em fatura | Estimate com depósito → Convert to invoice → aparece na lista de pagamentos |
+| Documento da fatura mostra **Paid to date** e **Balance due** (ou "Paid in full") | Ver `/e/<token>` da invoice |
+| Faturas antigas foram migradas: depósito virou pagamento "Deposit"; faturas PAID ganharam pagamento "Balance" | Supabase: `select * from "Payment";` |
+| Home → "Unpaid invoices" usa total − pago | — |
+| Editor de fatura não tem mais campo "Deposit already paid" | — |
+| Página do documento tem ícone 🎨 → Settings › Branding, com **paleta de 14 cores** de um toque | — |
+
+### 1.8 Regressão rápida (nada disso mudou, mas passa por código tocado)
 
 - Criar estimate → Send → abrir link público → status vira VIEWED → e-mail de notificação chega (se `RESEND_API_KEY` setado)
 - Declinar pelo link público com motivo

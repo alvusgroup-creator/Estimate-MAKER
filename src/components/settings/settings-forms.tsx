@@ -122,6 +122,13 @@ export function BrandingForm({ org }: { org: OrgSettings }) {
           <CardHeader><CardTitle>Colors & template</CardTitle></CardHeader>
           <CardBody>
             <form action={action} className="space-y-4">
+              <Field label="Quick palette" hint="Tap a color for headings and totals; fine-tune below.">
+                <div className="flex flex-wrap gap-2">
+                  {PALETTE.map((c) => (
+                    <button key={c} type="button" aria-label={c} onClick={() => setPrimary(c)} className={cn("h-8 w-8 rounded-full border-2 transition-transform hover:scale-110", primary.toLowerCase() === c ? "border-foreground scale-110" : "border-transparent")} style={{ background: c }} />
+                  ))}
+                </div>
+              </Field>
               <div className="grid grid-cols-2 gap-3">
                 <ColorField name="primaryColor" label="Document primary" value={primary} onChange={setPrimary} hint="Headings, totals, table header" />
                 <ColorField name="accentColor" label="Document accent" value={accent} onChange={setAccent} hint="Highlights" />
@@ -158,6 +165,9 @@ export function BrandingForm({ org }: { org: OrgSettings }) {
     </div>
   );
 }
+
+/** Contractor-friendly brand colors: navy, blues, greens, earth tones, safety orange, red, charcoal. */
+const PALETTE = ["#111827", "#1e3a8a", "#2563eb", "#0ea5e9", "#0f766e", "#16a34a", "#65a30d", "#a16207", "#c2410c", "#f97316", "#dc2626", "#7c3aed", "#6b7280", "#374151"];
 
 function ColorField({ name, label, value, onChange, hint }: { name: string; label: string; value: string; onChange: (v: string) => void; hint: string }) {
   return (

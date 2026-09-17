@@ -274,6 +274,7 @@ model Estimate {
   depositType    DiscountType?
   depositValue   Decimal?      @db.Decimal(12, 2)
   depositAmount  Decimal       @default(0) @db.Decimal(12, 2)
+  amountPaid     Decimal       @default(0) @db.Decimal(12, 2) // invoices: sum of payments, kept in sync on write
 
   // Public link → /e/[publicToken]
   publicToken   String    @unique @default(nanoid(12))
@@ -290,6 +291,7 @@ model Estimate {
   signedIp         String?
 
   lineItems EstimateLineItem[]
+  payments  Payment[]
   events    EstimateEvent[]
   aiRuns    AiRecommendation[]
   photos    EstimatePhoto[]
@@ -338,7 +340,34 @@ enum EstimateEventType {
   EXPIRED
   CONVERTED_TO_INVOICE
   CHANGE_ORDER_CREATED // on the parent estimate; the change order itself gets CREATED
+  PAYMENT_RECORDED
   PAID
+}
+
+enum PaymentMethod {
+  CASH
+  CHECK
+  CARD
+  BANK_TRANSFER
+  ZELLE
+  VENMO
+  OTHER
+}
+
+// Money received against an invoice: deposit, progress payments, final. Balance due = total − Σ payments.
+model Payment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  estimateId String
+  estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  amount Decimal        @db.Decimal(12, 2)
+  paidAt DateTime       @default(now())
+  method PaymentMethod?
+  note   String?
+
+  @@index([estimateId, paidAt])
 }
 
 // Job-site photos attached to an estimate (before/after, damage, measurements)

@@ -8,7 +8,8 @@ import { computeTotals } from "./calc";
 import { changeOrderFormSchema, estimateFormSchema, type EstimateFormValues } from "./schemas";
 import { docWords } from "@/lib/utils";
 import type { Prisma } from "@/generated/prisma/client";
-import type { EstimateStatus } from "@/generated/prisma/enums";
+import type { EstimateStatus, PaymentMethod } from "@/generated/prisma/enums";
+import { z } from "zod";
 import { emailEnabled, sendEmail } from "@/lib/email/send";
 import { customerDocumentEmail } from "@/lib/email/templates";
 
@@ -380,6 +381,8 @@ export async function convertToInvoice(estimateId: string) {
         depositType: src.depositType,
         depositValue: src.depositValue,
         depositAmount: src.depositAmount,
+        amountPaid: src.depositAmount,
+        payments: Number(src.depositAmount) > 0 ? { create: { amount: src.depositAmount, paidAt: src.acceptedAt ?? new Date(), note: "Deposit" } } : undefined,
         lineItems: { create: lineRows.map((l, i) => ({ ...l, position: i, lineTotal: totals.lineTotals[i] })) },
         photos: { create: src.photos.map((p) => ({ url: p.url, caption: p.caption, position: p.position, showOnDocument: false })) },
         events: { create: { type: "CREATED", metadata: { from: src.id } } },
@@ -397,20 +400,73 @@ export async function convertToInvoice(estimateId: string) {
   redirect(`/estimates/${inv.id}`);
 }
 
-export async function markInvoicePaid(id: string, paid: boolean) {
-  const { orgId } = await requireOrg();
-  const inv = await prisma.estimate.findFirst({ where: { id, organizationId: orgId, kind: "INVOICE" }, select: { status: true } });
-  if (!inv) throw new Error("Not found");
-  await prisma.estimate.update({
+/**
+ * Re-derive amountPaid and PAID/SENT from the payment rows. Called after every payment write
+ * so the persisted totals and the status never drift from the ledger.
+ */
+async function syncInvoicePayments(tx: Tx, id: string) {
+  const inv = await tx.estimate.findUniqueOrThrow({ where: { id }, select: { total: true, status: true, payments: { select: { amount: true, paidAt: true } } } });
+  const amountPaid = inv.payments.reduce((s, p) => s + Number(p.amount), 0);
+  const settled = amountPaid >= Number(inv.total) - 0.005;
+  const lastPaid = inv.payments.reduce<Date | null>((m, p) => (!m || p.paidAt > m ? p.paidAt : m), null);
+  await tx.estimate.update({
     where: { id },
-    data: paid
-      ? { status: "PAID", paidAt: new Date(), events: { create: { type: "PAID" } } }
-      : { status: "SENT", paidAt: null, events: { create: { type: "STATUS_CHANGED", metadata: { from: "PAID", to: "SENT" } } } },
+    data: {
+      amountPaid,
+      ...(settled && inv.status !== "PAID" ? { status: "PAID", paidAt: lastPaid ?? new Date(), events: { create: { type: "PAID" } } } : {}),
+      ...(!settled && inv.status === "PAID" ? { status: "SENT", paidAt: null, events: { create: { type: "STATUS_CHANGED", metadata: { from: "PAID", to: "SENT", reason: "payment removed" } } } } : {}),
+    },
   });
-  revalidatePath(`/estimates/${id}`);
-  revalidatePath("/estimates");
+}
+
+const paymentSchema = z.object({
+  amount: z.coerce.number().positive("Enter an amount"),
+  paidAt: z.coerce.date(),
+  method: z.enum(["CASH", "CHECK", "CARD", "BANK_TRANSFER", "ZELLE", "VENMO", "OTHER"]).nullable().optional(),
+  note: z.string().max(200).nullable().optional(),
+});
+
+/** Deposit, progress payment, final — any money received against an invoice. */
+export async function recordPayment(invoiceId: string, raw: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { orgId } = await requireOrg();
+  const parsed = paymentSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid payment" };
+  const inv = await prisma.estimate.findFirst({ where: { id: invoiceId, organizationId: orgId, kind: "INVOICE" }, select: { id: true } });
+  if (!inv) return { ok: false, error: "Invoice not found" };
+
+  const { amount, paidAt, note } = parsed.data;
+  const method = (parsed.data.method ?? null) as PaymentMethod | null;
+  await prisma.$transaction(async (tx) => {
+    await tx.payment.create({ data: { estimateId: inv.id, amount, paidAt, method, note: note?.trim() || null } });
+    await tx.estimateEvent.create({ data: { estimateId: inv.id, type: "PAYMENT_RECORDED", metadata: { amount, method } } });
+    await syncInvoicePayments(tx, inv.id);
+  });
+  revalidatePath(`/estimates/${inv.id}`);
   revalidatePath("/invoices");
   revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function deletePayment(paymentId: string) {
+  const { orgId } = await requireOrg();
+  const p = await prisma.payment.findFirst({ where: { id: paymentId, estimate: { organizationId: orgId } }, select: { id: true, estimateId: true } });
+  if (!p) throw new Error("Not found");
+  await prisma.$transaction(async (tx) => {
+    await tx.payment.delete({ where: { id: p.id } });
+    await syncInvoicePayments(tx, p.estimateId);
+  });
+  revalidatePath(`/estimates/${p.estimateId}`);
+  revalidatePath("/invoices");
+  revalidatePath("/dashboard");
+}
+
+/** "Mark as paid" = record one payment for whatever is still owed. */
+export async function markInvoicePaid(id: string) {
+  const { orgId } = await requireOrg();
+  const inv = await prisma.estimate.findFirst({ where: { id, organizationId: orgId, kind: "INVOICE" }, select: { total: true, amountPaid: true } });
+  if (!inv) throw new Error("Not found");
+  const balance = Math.round((Number(inv.total) - Number(inv.amountPaid)) * 100) / 100;
+  if (balance > 0) await recordPayment(id, { amount: balance, paidAt: new Date(), note: "Paid in full" });
 }
 
 /**

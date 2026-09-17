@@ -191,6 +191,7 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
     taxAmount: totals.taxAmount,
     total: totals.total,
     depositAmount: totals.depositAmount,
+    amountPaid: estimate?.amountPaid ?? 0,
     notes: values.notes,
     terms: values.terms,
     kind: isChangeOrder ? ("CHANGE_ORDER" as const) : ((estimate?.kind ?? "ESTIMATE") as "ESTIMATE" | "INVOICE"),
@@ -312,7 +313,7 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
                 <Input type="number" inputMode="decimal" step="0.01" min="0" max="100" {...register("taxRate", { setValueAs: (v) => (v === "" ? 0 : Number(v) / 100) })} defaultValue={(Number(defaults.taxRate) * 100).toString()} />
               </Field>
             </div>
-            {!isChangeOrder && <Field label={isInvoice ? "Deposit already paid" : "Deposit due on acceptance"}>
+            {!isChangeOrder && !isInvoice && <Field label="Deposit due on acceptance">
               <div className="flex gap-2">
                 <Select className="w-24" {...register("depositType", { setValueAs: (v) => (v === "" ? null : v) })}>
                   <option value="">None</option>

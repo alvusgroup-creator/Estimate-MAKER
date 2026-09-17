@@ -40,7 +40,7 @@ export function PublicActions({ token, status, kind, canRespond, orgName, orgPho
     <div className="px-4 sm:px-0 py-6 space-y-4">
       {kind === "INVOICE" ? (
         <div className="rounded-xl bg-white p-5 text-center border border-neutral-200 text-sm text-neutral-600">
-          {status === "PAID" ? "This invoice has been paid. Thank you!" : `To pay, contact ${orgName}${orgPhone ? ` at ${orgPhone}` : ""}.`}
+          {status === "PAID" ? "This invoice has been paid in full. Thank you!" : `To pay the balance, contact ${orgName}${orgPhone ? ` at ${orgPhone}` : ""}.`}
         </div>
       ) : status === "ACCEPTED" || mode === "done" ? (
         <div className="rounded-xl bg-white p-5 text-center border border-neutral-200">

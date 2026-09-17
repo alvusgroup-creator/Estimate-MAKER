@@ -35,6 +35,7 @@ export type DocumentData = {
   taxAmount: number;
   total: number;
   depositAmount: number;
+  amountPaid?: number; // invoices: Σ payments received
   notes?: string | null;
   terms?: string | null;
   // Customer acceptance (public link)
@@ -242,14 +243,15 @@ function Totals({ ctx, variant }: { ctx: Ctx; variant: "clean" | "bold" | "class
           <span className="tabular-nums font-semibold text-neutral-900">{money(data.depositAmount)}</span>
         </div>
       )}
-      {ctx.isInvoice && data.depositAmount > 0 && (
+      {ctx.isInvoice && (data.amountPaid ?? 0) > 0 && (
         <>
-          <div className={`${row} text-[12.5px] mt-1`}><span>Deposit received</span><span className="tabular-nums">− {money(data.depositAmount)}</span></div>
-          <div className="flex justify-between items-baseline pt-1 text-[14px] font-semibold"><span>{data.paidAt ? "Paid in full" : "Balance due"}</span><span className="tabular-nums">{money(data.paidAt ? 0 : data.total - data.depositAmount)}</span></div>
+          <div className={`${row} text-[12.5px] mt-1`}><span>Paid to date</span><span className="tabular-nums">− {money(data.amountPaid ?? 0)}</span></div>
+          {data.total - (data.amountPaid ?? 0) > 0.005 ? (
+            <div className="flex justify-between items-baseline pt-1 text-[14px] font-semibold"><span>Balance due</span><span className="tabular-nums">{money(data.total - (data.amountPaid ?? 0))}</span></div>
+          ) : (
+            <div className="flex justify-between items-baseline pt-1 text-[13px] font-semibold text-green-700"><span>Paid in full</span><span className="tabular-nums">{money(0)}</span></div>
+          )}
         </>
-      )}
-      {ctx.isInvoice && data.depositAmount === 0 && data.paidAt && (
-        <div className="flex justify-between items-baseline pt-1 text-[13px] font-semibold text-green-700"><span>Paid</span><span className="tabular-nums">{money(data.total)}</span></div>
       )}
     </div>
   );

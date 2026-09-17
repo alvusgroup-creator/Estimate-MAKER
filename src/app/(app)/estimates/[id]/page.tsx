@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, FilePlus2, Pencil } from "lucide-react";
+import { ArrowLeft, FilePlus2, Palette, Pencil } from "lucide-react";
 import { requireOrg } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadEstimate } from "@/lib/estimates/queries";
@@ -9,6 +9,7 @@ import { EstimateDocument } from "@/components/templates/estimate-document";
 import { EstimateActions } from "@/components/estimates/estimate-actions";
 import { AiPanel } from "@/components/estimates/ai-panel";
 import { DocumentMenu } from "@/components/estimates/document-menu";
+import { PaymentsCard } from "@/components/estimates/payments-card";
 import { StatusBadge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +53,7 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
         {estimate.kind === "ESTIMATE" && estimate.status === "ACCEPTED" && (
           <Link href={`/estimates/${id}/change-order`} className={cn(buttonVariants({ variant: "secondary" }))}><FilePlus2 className="h-4 w-4" /> Change order</Link>
         )}
+        <Link href="/settings?tab=branding" className={cn(buttonVariants({ variant: "ghost", size: "icon" }))} aria-label="Customize look (logo, colors, template)" title="Customize look"><Palette className="h-4 w-4" /></Link>
       </div>
 
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:items-start space-y-4 lg:space-y-0">
@@ -73,6 +75,7 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
 
         <div className="space-y-4">
           <EstimateActions estimate={estimate} publicUrl={publicUrl} emailEnabled={emailEnabled()} />
+          {estimate.kind === "INVOICE" && <PaymentsCard invoiceId={estimate.id} total={estimate.total} payments={estimate.payments} currency={org.currency} locale={org.locale} />}
           {estimate.kind === "ESTIMATE" && (estimate.changeOrders.length > 0 || estimate.status === "ACCEPTED") && (
             <Card>
               <CardHeader>

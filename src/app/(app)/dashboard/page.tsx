@@ -35,7 +35,7 @@ export default async function DashboardPage() {
       _count: true,
     }),
     prisma.estimate.count({ where: { organizationId: orgId, kind: "ESTIMATE", sentAt: { gte: since30d } } }),
-    prisma.estimate.aggregate({ where: { organizationId: orgId, kind: "INVOICE", status: { in: ["DRAFT", "SENT", "VIEWED"] } }, _sum: { total: true, depositAmount: true }, _count: true }),
+    prisma.estimate.aggregate({ where: { organizationId: orgId, kind: "INVOICE", status: { in: ["DRAFT", "SENT", "VIEWED"] } }, _sum: { total: true, amountPaid: true }, _count: true }),
     prisma.client.count({ where: { organizationId: orgId, archivedAt: null } }),
   ]);
 
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <Stat label="Awaiting response" value={money(open._sum.total)} sub={`${open._count} open`} />
-        <Stat label="Unpaid invoices" value={money(Number(unpaid._sum.total ?? 0) - Number(unpaid._sum.depositAmount ?? 0))} sub={`${unpaid._count} invoice${unpaid._count === 1 ? "" : "s"}`} href="/invoices?f=unpaid" />
+        <Stat label="Unpaid invoices" value={money(Number(unpaid._sum.total ?? 0) - Number(unpaid._sum.amountPaid ?? 0))} sub={`${unpaid._count} invoice${unpaid._count === 1 ? "" : "s"}`} href="/invoices?f=unpaid" />
         <Stat label="Won · 30 days" value={money(accepted30d._sum.total)} sub={`${accepted30d._count} accepted`} />
         <Stat label="Win rate · 30 days" value={winRate === null ? "—" : `${winRate}%`} sub={`${sent30d} sent`} />
         <Stat label="Clients" value={String(clientCount)} sub="in your book" />

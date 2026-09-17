@@ -61,11 +61,8 @@ export function EstimateActions({ estimate, publicUrl, emailEnabled }: { estimat
         </div>
 
         <div className="border-t border-border pt-3 mt-1 space-y-2">
-          {inv && (s === "SENT" || s === "VIEWED" || s === "DRAFT") && (
-            <Button className="w-full bg-success hover:bg-success/90 text-white" disabled={pending} onClick={() => start(() => markInvoicePaid(estimate.id, true))}><BadgeDollarSign className="h-4 w-4" /> Mark as paid</Button>
-          )}
-          {inv && s === "PAID" && (
-            <Button variant="secondary" className="w-full" disabled={pending} onClick={() => start(() => markInvoicePaid(estimate.id, false))}><Undo2 className="h-4 w-4" /> Mark as unpaid</Button>
+          {inv && s !== "PAID" && (
+            <Button className="w-full bg-success hover:bg-success/90 text-white" disabled={pending} onClick={() => start(() => markInvoicePaid(estimate.id))}><BadgeDollarSign className="h-4 w-4" /> Mark as paid</Button>
           )}
           {isEstimate && s === "ACCEPTED" && (
             <Link href={`/estimates/${estimate.id}/change-order`} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm font-medium hover:bg-background"><FilePlus2 className="h-4 w-4" /> New change order</Link>

@@ -48,8 +48,7 @@ export function useEstimateMenu(e: EstimateRowData, opts?: { includeOpen?: boole
   ];
 
   if (inv) {
-    if (e.status !== "PAID") items.push({ label: "Mark as paid", icon: BadgeDollarSign, onSelect: () => start(() => markInvoicePaid(e.id, true)) });
-    else items.push({ label: "Mark as unpaid", icon: Undo2, onSelect: () => start(() => markInvoicePaid(e.id, false)) });
+    if (e.status !== "PAID") items.push({ label: "Mark as paid", icon: BadgeDollarSign, onSelect: () => start(() => markInvoicePaid(e.id)) });
   } else {
     if (e.status === "DRAFT") items.push({ label: "Mark as sent", icon: Send, onSelect: () => start(() => setEstimateStatus(e.id, "SENT")) });
     if (open) {
