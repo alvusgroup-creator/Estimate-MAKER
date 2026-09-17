@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { EstimateDocument } from "@/components/templates/estimate-document";
+import { LookPanel } from "@/components/templates/look-panel";
+import { ScaledDocument } from "@/components/templates/scaled-document";
 import { computeTotals, formatMoney } from "@/lib/estimates/calc";
 import { changeOrderFormSchema, estimateFormSchema, UNIT_LABELS, type EstimateFormInput, type EstimateFormValues } from "@/lib/estimates/schemas";
 import type { ClientDTO, EstimateDTO, OrgBranding, ParentEstimateDTO, ServiceItemDTO } from "@/lib/estimates/dto";
@@ -45,6 +47,8 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
   const [serverError, setServerError] = useState<string | null>(null);
   const [clients, setClients] = useState(initialClients);
   const [preview, setPreview] = useState(false);
+  const [primaryColor, setPrimaryColor] = useState(org.primaryColor); // brand color picked from the preview panel
+  const docOrg = { ...org, primaryColor };
   const [catalogLocal, setCatalogLocal] = useState(catalog);
   const [toast, setToast] = useState<string | null>(null);
   const notify = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 1800); };
@@ -416,9 +420,9 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
             <CardBody>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {TEMPLATES.map((t) => (
-                  <button key={t.id} type="button" onClick={() => setValue("template", t.id)} className={cn("rounded-lg border-2 p-1.5 text-left text-xs", values.template === t.id ? "border-accent bg-accent-soft" : "border-border hover:border-muted")}>
-                    <TemplateThumb template={t.id} color={org.primaryColor} />
-                    <span className="block mt-1.5 font-medium">{t.label}</span>
+                  <button key={t.id} type="button" onClick={() => setValue("template", t.id)} className={cn("rounded-lg border-2 p-1 text-left text-xs bg-neutral-100", values.template === t.id ? "border-accent" : "border-transparent hover:border-muted")}>
+                    <ScaledDocument className="overflow-hidden rounded bg-white pointer-events-none" width={760} template={t.id} org={docOrg} data={previewData} />
+                    <span className={cn("block mt-1 px-1 font-medium", values.template === t.id ? "text-accent" : "text-muted")}>{t.label}</span>
                   </button>
                 ))}
               </div>
@@ -439,11 +443,14 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
             <p className="flex-1 text-center text-sm font-medium truncate">{numberPreview} · {money(totals.total)}</p>
             <Button type="submit" variant="accent" disabled={pending}>{saveLabel}</Button>
           </div>
-          <div className="mx-auto max-w-3xl px-0 sm:px-4 py-0 sm:py-8">
+          <div className="mx-auto max-w-3xl px-0 sm:px-4 py-0 sm:py-8 pb-6">
             <div className="bg-white sm:rounded-xl sm:shadow-sm overflow-hidden">
-              <EstimateDocument template={(values.template ?? "CLEAN") as Template} org={org} data={previewData} />
+              <EstimateDocument template={(values.template ?? "CLEAN") as Template} org={docOrg} data={previewData} />
             </div>
           </div>
+          {!isChangeOrder && (
+            <LookPanel org={docOrg} data={previewData} template={(values.template ?? "CLEAN") as Template} onTemplate={(t) => setValue("template", t, { shouldDirty: true })} onColor={setPrimaryColor} />
+          )}
         </div>
       )}
 
@@ -735,35 +742,6 @@ function Collapsible({ title, defaultOpen, children, className }: { title: strin
         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !open && "-rotate-90")} /> {title}
       </button>
       {open && <div className="mt-2">{children}</div>}
-    </div>
-  );
-}
-
-/** Tiny schematic of each layout: header treatment, table header, balance bar. */
-function TemplateThumb({ template, color }: { template: Template; color: string }) {
-  const dark = "#1f2937";
-  const head = template === "NOIR" || template === "CLASSIC" ? dark : template === "MINIMAL" ? "transparent" : color;
-  const flatBalance = template === "MINIMAL" || template === "EXECUTIVE";
-  return (
-    <div className="aspect-[3/4] w-full rounded bg-white border border-border overflow-hidden p-1.5 flex flex-col gap-1">
-      {template === "BOLD" ? (
-        <div className="h-3 rounded-sm" style={{ background: `linear-gradient(90deg, ${color}, ${color}99)` }} />
-      ) : template === "NOIR" ? (
-        <div className="h-3 rounded-sm" style={{ background: dark }} />
-      ) : template === "CLASSIC" ? (
-        <div className="h-3 border-b-2 border-neutral-800 flex justify-between items-end"><div className="w-1/3 h-1.5 bg-neutral-400 rounded-sm" /><div className="w-1/4 h-1.5 bg-neutral-800 rounded-sm" /></div>
-      ) : template === "MINIMAL" ? (
-        <div className="h-3 flex items-center gap-1"><div className="h-2 w-2 rounded-sm bg-neutral-300" /><div className="h-1.5 w-1/3 bg-neutral-300 rounded-sm" /></div>
-      ) : template === "EXECUTIVE" ? (
-        <div className="h-3 flex justify-between"><div className="h-2 w-1/3 bg-neutral-300 rounded-sm" /><div className="h-2 w-1/4 bg-neutral-800 rounded-sm" /></div>
-      ) : (
-        <div className="flex justify-between"><div className="h-2 w-1/3 rounded-sm" style={{ background: color }} /><div className="h-2 w-2 bg-neutral-200 rounded-sm" /></div>
-      )}
-      <div className="h-1 rounded-sm mt-1" style={{ background: head, borderBottom: template === "MINIMAL" ? "1px solid #9ca3af" : undefined }} />
-      <div className="space-y-0.5 flex-1">
-        {[0, 1, 2].map((i) => <div key={i} className="h-1 bg-neutral-200 rounded-sm" style={{ width: `${90 - i * 15}%` }} />)}
-      </div>
-      <div className={cn("h-1.5 rounded-sm self-end", flatBalance ? "w-1/2 border-t border-neutral-800" : "w-2/3")} style={flatBalance ? undefined : { background: `linear-gradient(90deg, ${dark}, #6b7280)` }} />
     </div>
   );
 }

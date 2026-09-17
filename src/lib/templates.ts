@@ -9,3 +9,6 @@ export const TEMPLATES: { id: Template; label: string; description: string }[] =
   { id: "MINIMAL", label: "Minimal", description: "Thin rules, no fills" },
   { id: "EXECUTIVE", label: "Executive", description: "Blue table, big balance line" },
 ];
+
+/** Contractor-friendly brand colors: navy, blues, greens, earth tones, safety orange, red, charcoal. */
+export const PALETTE = ["#111827", "#1e3a8a", "#2563eb", "#0ea5e9", "#0f766e", "#16a34a", "#65a30d", "#a16207", "#c2410c", "#f97316", "#dc2626", "#7c3aed", "#6b7280", "#374151"];

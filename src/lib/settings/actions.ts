@@ -51,6 +51,16 @@ const notificationsSchema = z.object({
 
 export type SettingsState = { ok?: boolean; error?: string } | undefined;
 
+/** One-tap brand color from the editor's preview panel. Saves immediately; the doc preview updates locally. */
+export async function saveDocumentColor(primaryColor: string): Promise<SettingsState> {
+  const { orgId } = await requireOrg();
+  const p = hex.safeParse(primaryColor);
+  if (!p.success) return { error: "Invalid color" };
+  await prisma.organization.update({ where: { id: orgId }, data: { primaryColor: p.data } });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 export async function saveBusiness(_: SettingsState, fd: FormData): Promise<SettingsState> {
   const { orgId } = await requireOrg();
   const p = businessSchema.safeParse(Object.fromEntries(fd));

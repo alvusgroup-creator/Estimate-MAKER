@@ -136,7 +136,13 @@ Todos têm: **Payment instructions** (novo campo em Settings › Tax & estimate 
 
 Como testar: Settings › Branding → trocar o modelo e ver o preview (miniatura real) · editor → card **Look** com 6 miniaturas · abrir `/e/<token>` no celular (não deve transbordar).
 
-### 1.10 Regressão rápida (nada disso mudou, mas passa por código tocado)
+### 1.10 Preview & personalizar (no editor)
+
+Como na referência: no **Preview** do editor tem uma régua embaixo com abas **Template** (miniaturas reais dos 6 modelos, já com os dados do documento) · **Color** (bolinhas — salva na marca na hora, vale pra todos os documentos) · **Logo** (leva ao Branding). O card **Look** do formulário também usa as miniaturas reais.
+
+Como testar: editor → Preview → trocar modelo (muda na hora) → aba Color → escolher → "Saved to your brand" → Save → abrir outro documento: cor mantida.
+
+### 1.11 Regressão rápida (nada disso mudou, mas passa por código tocado)
 
 - Criar estimate → Send → abrir link público → status vira VIEWED → e-mail de notificação chega (se `RESEND_API_KEY` setado)
 - Declinar pelo link público com motivo

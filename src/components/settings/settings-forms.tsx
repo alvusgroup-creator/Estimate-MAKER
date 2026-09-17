@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScaledDocument } from "@/components/templates/scaled-document";
-import { TEMPLATES } from "@/lib/templates";
+import { PALETTE, TEMPLATES } from "@/lib/templates";
 import { removeLogo, saveBranding, saveBusiness, saveDefaults, saveNotifications, uploadLogo, type SettingsState } from "@/lib/settings/actions";
 import type { OrgBranding } from "@/lib/estimates/dto";
 import type { Template } from "@/generated/prisma/enums";
@@ -166,9 +166,6 @@ export function BrandingForm({ org }: { org: OrgSettings }) {
     </div>
   );
 }
-
-/** Contractor-friendly brand colors: navy, blues, greens, earth tones, safety orange, red, charcoal. */
-const PALETTE = ["#111827", "#1e3a8a", "#2563eb", "#0ea5e9", "#0f766e", "#16a34a", "#65a30d", "#a16207", "#c2410c", "#f97316", "#dc2626", "#7c3aed", "#6b7280", "#374151"];
 
 function ColorField({ name, label, value, onChange, hint }: { name: string; label: string; value: string; onChange: (v: string) => void; hint: string }) {
   return (
