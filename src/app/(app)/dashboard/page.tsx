@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertCircle, ArrowRight, BadgeDollarSign, ChevronRight, Clock, FileText, Plus, UserPlus } from "lucide-react";
+import { AlertCircle, ArrowRight, BadgeDollarSign, ChevronRight, Clock, FileText, Plus, Sun, Target, Trophy, Users } from "lucide-react";
 import { requireOrg } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { expireStaleEstimates } from "@/lib/estimates/expire";
@@ -23,9 +23,8 @@ function periodStart(p: Period) {
  * Home = the number the contractor cares about (won this period), what's still owed, and what
  * needs a nudge — setup gaps, open estimates, overdue invoices. Recent docs below, big create CTA.
  */
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ p?: string; v?: string }> }) {
-  const [{ orgId, org }, { p, v }] = await Promise.all([requireOrg(), searchParams]);
-  const variant = v === "b" ? "b" : "a";
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ p?: string }> }) {
+  const [{ orgId, org, user }, { p }] = await Promise.all([requireOrg(), searchParams]);
   const period: Period = p === "year" ? "year" : "month";
   await expireStaleEstimates(orgId);
   const since = periodStart(period);
@@ -48,6 +47,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const owed = Number(unpaid._sum.total ?? 0) - Number(unpaid._sum.amountPaid ?? 0);
   const overdueAmt = Number(overdue._sum.total ?? 0) - Number(overdue._sum.amountPaid ?? 0);
   const monthLabel = now.toLocaleDateString(org.locale, { month: "short", year: "numeric" });
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const firstName = (user.fullName ?? org.name).split(" ")[0];
   const yearLabel = String(now.getFullYear());
 
   // Setup nudges — the "Stripe account incomplete" card from the reference, for the things that make a document look pro
@@ -58,105 +60,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     !org.signatureDataUrl && !org.signatureName && { title: "Add your signature", sub: "Stamped next to the customer's on accepted estimates.", href: "/settings?tab=signature" },
   ].filter((x): x is { title: string; sub: string; href: string } => !!x).slice(0, 2);
 
-  /* ── Variant B: "Alvus dark" — black hero with the number in yellow, quick actions, a
-     "needs attention" list instead of stat tiles, recent as compact cards. Try it at ?v=b. ── */
-  if (variant === "b") {
-    const hour = now.getHours();
-    const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-    type Attention = { icon: typeof Clock; tone: "danger" | "warn" | "info"; title: string; sub: string; href: string };
-    const attention: Attention[] = [
-      ...(overdue._count > 0 ? [{ icon: BadgeDollarSign, tone: "danger" as const, title: `${overdue._count} overdue invoice${overdue._count === 1 ? "" : "s"}`, sub: `${money(overdueAmt)} past due`, href: "/invoices?f=unpaid" }] : []),
-      ...(open._count > 0 ? [{ icon: Clock, tone: "warn" as const, title: `${open._count} estimate${open._count === 1 ? "" : "s"} awaiting a reply`, sub: `${money(open._sum.total)} on the table. A quick text often closes it.`, href: "/estimates?f=open" }] : []),
-      ...nudges.map((n) => ({ icon: AlertCircle, tone: "info" as const, title: n.title, sub: n.sub, href: n.href })),
-    ];
-
-    return (
-      <div className="space-y-5 pb-24 md:pb-8">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm text-muted">{greeting},</p>
-            <h1 className="text-2xl font-semibold leading-tight">{org.name}</h1>
-          </div>
-          <Link href="/dashboard" className="text-xs text-muted hover:text-foreground underline">Layout A</Link>
-        </div>
-
-        <section className="rounded-3xl bg-[#0b0b0b] text-white px-6 py-7 sm:px-8 sm:py-9 relative overflow-hidden">
-          <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-brand/15 blur-2xl" aria-hidden />
-          <div className="flex items-center justify-between gap-3 relative">
-            <div className="inline-flex rounded-full bg-white/10 p-1 text-xs font-medium">
-              <Link href="/dashboard?v=b" className={cn("rounded-full px-3 h-7 inline-flex items-center", period === "month" ? "bg-brand text-brand-foreground" : "text-white/70")}>{monthLabel}</Link>
-              <Link href="/dashboard?v=b&p=year" className={cn("rounded-full px-3 h-7 inline-flex items-center", period === "year" ? "bg-brand text-brand-foreground" : "text-white/70")}>{yearLabel}</Link>
-            </div>
-            <span className="text-xs text-white/50">{winRate === null ? "Nothing sent yet" : `${winRate}% win rate`}</span>
-          </div>
-          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-white/50 relative">Won this {period}</p>
-          <p className="mt-1 text-[48px] sm:text-[64px] font-semibold tabular-nums tracking-tight leading-none text-brand relative">{money(won._sum.total)}</p>
-          <div className="mt-6 grid grid-cols-3 gap-3 relative">
-            <div><p className="text-[11px] text-white/50">Outstanding</p><p className={cn("text-lg font-semibold tabular-nums", owed > 0 ? "text-white" : "text-white/60")}>{money(owed)}</p></div>
-            <div><p className="text-[11px] text-white/50">Awaiting reply</p><p className="text-lg font-semibold tabular-nums">{money(open._sum.total)}</p></div>
-            <div><p className="text-[11px] text-white/50">Clients</p><p className="text-lg font-semibold tabular-nums">{clientCount}</p></div>
-          </div>
-        </section>
-
-        <div className="grid grid-cols-3 gap-3">
-          <QuickAction href="/estimates/new" icon={Plus} label="New estimate" primary />
-          <QuickAction href="/clients/new" icon={UserPlus} label="New client" />
-          <QuickAction href="/invoices?f=unpaid" icon={BadgeDollarSign} label="Record payment" />
-        </div>
-
-        {attention.length > 0 && (
-          <section>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-2 px-1">Needs attention</p>
-            <Card className="divide-y divide-border">
-              {attention.map((a) => (
-                <Link key={a.href + a.title} href={a.href} className="flex items-center gap-3 px-4 py-3 hover:bg-background">
-                  <span className={cn("h-9 w-9 rounded-full grid place-items-center shrink-0", a.tone === "danger" ? "bg-danger-soft text-danger" : a.tone === "warn" ? "bg-warning-soft text-warning" : "bg-accent-soft text-accent")}><a.icon className="h-4 w-4" /></span>
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-medium">{a.title}</span><span className="block text-xs text-muted truncate">{a.sub}</span></span>
-                  <ChevronRight className="h-4 w-4 text-muted" />
-                </Link>
-              ))}
-            </Card>
-          </section>
-        )}
-
-        <section>
-          <div className="flex items-center justify-between mb-2 px-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Recent</p>
-            <Link href="/estimates" className="text-xs text-accent inline-flex items-center gap-1">All <ArrowRight className="h-3 w-3" /></Link>
-          </div>
-          {recent.length === 0 ? (
-            <Card><EmptyState icon={FileText} title="No estimates yet" description="Create your first estimate. It takes about two minutes." action={<Link href="/estimates/new" className={buttonVariants()}>New estimate</Link>} /></Card>
-          ) : (
-            <div className="grid sm:grid-cols-2 gap-3">
-              {recent.slice(0, 6).map((e) => {
-                const due = e.kind === "INVOICE" && e.status !== "PAID" && e.status !== "DRAFT" ? dueLabel(e.dueDate, now) : null;
-                return (
-                  <EstimateRowMenu key={e.id} estimate={{ id: e.id, number: e.number, kind: e.kind, status: e.status, publicToken: e.publicToken, invoiceId: e.invoice?.id ?? null, client: { firstName: e.client.firstName, phone: e.client.phone, email: e.client.email } }}>
-                    <Link href={`/estimates/${e.id}`} className="block rounded-xl border border-border bg-surface p-4 hover:shadow-md">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-xs text-muted">{docWords(e.kind).Word} {e.number}</span>
-                        {due ? <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", due.tone === "danger" ? "bg-danger-soft text-danger" : "bg-warning-soft text-warning")}>{due.text}</span> : <StatusBadge status={e.status} className="text-[10px] px-1.5 py-0" />}
-                      </div>
-                      <p className="mt-2 font-medium truncate">{clientDisplayName(e.client)}</p>
-                      <p className="text-xs text-muted truncate">{e.title ?? "—"}</p>
-                      <p className="mt-3 text-lg font-semibold tabular-nums">{money(e.total)}</p>
-                    </Link>
-                  </EstimateRowMenu>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-5 pb-24 md:pb-8">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Home</h1>
-          <p className="text-sm text-muted">{org.name} · <Link href="/dashboard?v=b" className="underline hover:text-foreground">try layout B</Link></p>
+        <div className="flex items-center gap-3">
+          <span className="h-11 w-11 rounded-full bg-brand text-brand-foreground grid place-items-center shrink-0"><Sun className="h-5 w-5" /></span>
+          <div>
+            <h1 className="text-2xl font-semibold leading-tight">{greeting}, {firstName}!</h1>
+            <p className="text-sm text-muted">{org.name} · {now.toLocaleDateString(org.locale, { weekday: "long", month: "long", day: "numeric" })}</p>
+          </div>
         </div>
         <Link href="/settings?tab=upgrade" className={cn("inline-flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-semibold", org.plan === "PRO" ? "bg-warning text-white" : "bg-surface border border-border text-muted hover:text-foreground")}>
           {org.plan === "PRO" ? "PRO" : "Free plan"}
@@ -174,7 +86,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
 
         <div className="text-center mt-6">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted">Won · {period === "month" ? monthLabel : yearLabel}</p>
+          <p className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted"><Trophy className="h-3.5 w-3.5 text-brand-foreground/70" /> Won · {period === "month" ? monthLabel : yearLabel}</p>
           <p className="text-[44px] sm:text-[56px] font-semibold tabular-nums tracking-tight leading-none mt-2">{money(won._sum.total)}</p>
           <p className="mt-3 text-sm">
             <span className="text-muted">Outstanding:</span>{" "}
@@ -185,10 +97,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </section>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Stat label="Awaiting response" value={money(open._sum.total)} sub={`${open._count} open estimate${open._count === 1 ? "" : "s"}`} href="/estimates?f=open" />
-        <Stat label="Unpaid invoices" value={money(owed)} sub={`${unpaid._count} invoice${unpaid._count === 1 ? "" : "s"}`} href="/invoices?f=unpaid" tone={overdue._count > 0 ? "danger" : undefined} />
-        <Stat label="Win rate" value={winRate === null ? "—" : `${winRate}%`} sub={`${sentPeriod} sent this ${period}`} />
-        <Stat label="Clients" value={String(clientCount)} sub="in your book" href="/clients" />
+        <Stat icon={Clock} label="Awaiting response" value={money(open._sum.total)} sub={`${open._count} open estimate${open._count === 1 ? "" : "s"}`} href="/estimates?f=open" />
+        <Stat icon={BadgeDollarSign} label="Unpaid invoices" value={money(owed)} sub={`${unpaid._count} invoice${unpaid._count === 1 ? "" : "s"}`} href="/invoices?f=unpaid" tone={overdue._count > 0 ? "danger" : undefined} />
+        <Stat icon={Target} label="Win rate" value={winRate === null ? "—" : `${winRate}%`} sub={`${sentPeriod} sent this ${period}`} />
+        <Stat icon={Users} label="Clients" value={String(clientCount)} sub="in your book" href="/clients" />
       </div>
 
       {nudges.length > 0 && (
@@ -247,14 +159,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   );
 }
 
-function QuickAction({ href, icon: Icon, label, primary }: { href: string; icon: typeof Plus; label: string; primary?: boolean }) {
-  return (
-    <Link href={href} className={cn("flex flex-col items-center justify-center gap-2 rounded-2xl h-24 text-sm font-semibold text-center px-2", primary ? "bg-brand text-brand-foreground hover:bg-brand/90" : "bg-surface border border-border hover:bg-background")}>
-      <Icon className="h-6 w-6" /> {label}
-    </Link>
-  );
-}
-
 function dueLabel(due: Date | null, now: Date): { text: string; tone: "warn" | "danger" } | null {
   if (!due) return null;
   const days = Math.ceil((due.getTime() - now.getTime()) / 864e5);
@@ -274,10 +178,10 @@ function PeriodCard({ active, href, label, value, sub }: { active: boolean; href
   );
 }
 
-function Stat({ label, value, sub, href, tone }: { label: string; value: string; sub: string; href?: string; tone?: "danger" }) {
+function Stat({ icon: Icon, label, value, sub, href, tone }: { icon: typeof Clock; label: string; value: string; sub: string; href?: string; tone?: "danger" }) {
   const body = (
     <div className="p-4">
-      <p className="text-xs text-muted">{label}</p>
+      <p className="flex items-center gap-2 text-xs text-muted"><span className={cn("h-7 w-7 rounded-lg grid place-items-center", tone === "danger" ? "bg-danger-soft text-danger" : "bg-accent-soft text-accent")}><Icon className="h-4 w-4" /></span>{label}</p>
       <p className={cn("text-xl font-semibold tabular-nums mt-1", tone === "danger" && "text-danger")}>{value}</p>
       <p className="text-xs text-muted mt-0.5">{sub}</p>
     </div>
