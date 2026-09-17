@@ -141,7 +141,7 @@ function ServiceEditor({ id, draft, categories, onCancel, onSaved, onArchived }:
         <p className="text-sm font-semibold">{id ? "Edit service" : "New service"}</p>
         <button type="button" onClick={onCancel} aria-label="Cancel"><X className="h-4 w-4 text-muted" /></button>
       </div>
-      <Field label="Name *"><Input value={d.name} onChange={(e) => set("name", e.target.value)} autoFocus placeholder="Interior Painting — Walls" /></Field>
+      <Field label="Name *"><Input value={d.name} onChange={(e) => set("name", e.target.value)} autoFocus placeholder="Interior Painting, Walls" /></Field>
       <Field label="Description (shows on the estimate)"><Textarea value={d.description} onChange={(e) => set("description", e.target.value)} className="min-h-[56px]" placeholder="Two coats premium paint, patch & prep included" /></Field>
       <div className="grid grid-cols-3 gap-3">
         <Field label="Price">

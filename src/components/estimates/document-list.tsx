@@ -11,6 +11,7 @@ import { buttonVariants } from "@/components/ui/button";
 import type { DocumentKind, EstimateStatus } from "@/generated/prisma/enums";
 import { EstimateRowMenu } from "@/components/estimates/estimate-row-menu";
 import { DiscoveryHint } from "@/components/ui/discovery-hint";
+import { PageHeader } from "@/components/ui/page-header";
 
 export type ListFilter = { key: string; label: string; kind: DocumentKind; statuses?: EstimateStatus[] };
 
@@ -102,13 +103,15 @@ export async function DocumentList({ base, filters, searchParams }: {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{title}</h1>
-        {!isInvoices && <Link href="/estimates/new" className={buttonVariants()}><Plus className="h-4 w-4" /> New</Link>}
-      </div>
+      <PageHeader
+        icon={isInvoices ? Receipt : filter.kind === "CHANGE_ORDER" ? FilePlus2 : FileText}
+        title={title}
+        subtitle={isInvoices ? "What you billed and what came in" : filter.kind === "CHANGE_ORDER" ? "Extra work your customers approved" : "What you quoted and what you won"}
+        action={!isInvoices ? <Link href="/estimates/new" className={buttonVariants({ variant: "accent" })}><Plus className="h-4 w-4" /> New</Link> : undefined}
+      />
 
       {/* Month header */}
-      <div className="rounded-2xl bg-gradient-to-b from-accent-soft to-surface border border-border px-4 py-5 text-center">
+      <div className="rounded-2xl bg-gradient-to-br from-accent-soft via-surface to-surface border border-border px-4 py-5 text-center">
         <div className="inline-flex items-center gap-1 rounded-full bg-surface/80 border border-border px-1 h-9">
           <Link href={href({ m: shiftMonth(month.key, -1) })} aria-label="Previous month" className="h-7 w-7 grid place-items-center rounded-full hover:bg-black/5"><ChevronLeft className="h-4 w-4" /></Link>
           <span className="text-sm font-medium px-1 min-w-[140px]">{monthLabel}</span>
@@ -149,7 +152,7 @@ export async function DocumentList({ base, filters, searchParams }: {
               q ? "Try a different search."
               : isInvoices ? "Accept an estimate, then use “Convert to invoice”. The invoice carries the deposit and any change orders."
               : filter.kind === "CHANGE_ORDER" ? "Open an accepted estimate and click “Change order” when the customer asks for extra work."
-              : "Create an estimate and send the link — your customer can accept and sign from their phone."
+              : "Create an estimate and send the link. Your customer can accept and sign from their phone."
             }
             action={!q && !isInvoices && filter.kind !== "CHANGE_ORDER" ? <Link href="/estimates/new" className={buttonVariants()}><Plus className="h-4 w-4" /> New estimate</Link> : scopedToMonth && !q ? <Link href={href({ m: "all" })} className={buttonVariants({ variant: "secondary" })}>Show all time</Link> : undefined}
           />

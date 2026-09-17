@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Moon, Sun, Sunset } from "lucide-react";
 
 /**
@@ -8,12 +8,13 @@ import { Moon, Sun, Sunset } from "lucide-react";
  * Renders neutrally on the server, then updates once mounted and again every minute.
  */
 export function Greeting({ name, orgName, locale }: { name: string; orgName: string; locale: string }) {
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    setNow(new Date());
-    const t = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(t);
-  }, []);
+  // Minute-resolution clock as an external store: null on the server, ticks once a minute in the browser
+  const minute = useSyncExternalStore(
+    (onChange) => { const t = setInterval(onChange, 60_000); return () => clearInterval(t); },
+    () => Math.floor(Date.now() / 60_000),
+    () => null,
+  );
+  const now = minute === null ? null : new Date(minute * 60_000);
 
   const hour = now?.getHours();
   const { text, Icon } =

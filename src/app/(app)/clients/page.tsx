@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { ClientRowMenu } from "@/components/clients/client-row-menu";
 import { DiscoveryHint } from "@/components/ui/discovery-hint";
+import { PageHeader } from "@/components/ui/page-header";
 import { formatAddress } from "@/lib/utils";
 
 export const metadata = { title: "Clients" };
@@ -44,10 +45,12 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Clients</h1>
-        <Link href="/clients/new" className={buttonVariants()}><Plus className="h-4 w-4" /> New</Link>
-      </div>
+      <PageHeader
+        icon={Users}
+        title="Clients"
+        subtitle={`${clients.length} in your book${q ? " matching your search" : ""}`}
+        action={<Link href="/clients/new" className={buttonVariants({ variant: "accent" })}><Plus className="h-4 w-4" /> New</Link>}
+      />
 
       <DiscoveryHint />
 
@@ -76,7 +79,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{clientDisplayName(c)}</p>
                       <p className="text-xs text-muted truncate">
-                        {[c.phone, [c.city, c.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ") || c.email || "—"}
+                        {[c.phone, [c.city, c.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ") || c.email || "No contact info"}
                       </p>
                     </div>
                     <div className="text-right hidden sm:block">

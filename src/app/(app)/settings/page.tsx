@@ -10,6 +10,8 @@ import { Card, CardBody } from "@/components/ui/card";
 import { emailEnabled } from "@/lib/email/send";
 import { tradeById } from "@/lib/trades";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
+import { Settings as SettingsIcon } from "lucide-react";
 
 export const metadata = { title: "Settings" };
 
@@ -67,7 +69,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Settings</h1>
+      <PageHeader icon={SettingsIcon} title="Settings" subtitle="Your account, your business, how documents look" />
 
       <Section title="Account">
         <Row icon={Crown} label={org.plan === "PRO" ? "Pro plan" : "Upgrade to Pro"} sub={org.plan === "PRO" ? "Unlimited estimates, AI review and more" : "See what's included"} href="/settings?tab=upgrade" iconClass="bg-warning-soft text-warning" />
@@ -175,7 +177,7 @@ function PlanComparison({ plan }: { plan: "FREE" | "PRO" }) {
           ) : (
             <>
               <p className="text-sm font-medium">Pro is coming soon.</p>
-              <p className="text-sm text-muted">During early access everything above is free — no limits, no card.</p>
+              <p className="text-sm text-muted">During early access everything above is free. No limits, no card.</p>
             </>
           )}
         </CardBody>
