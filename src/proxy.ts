@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Next 16 "proxy" (formerly middleware): refresh the Supabase session cookie on
-// every request and gate the authenticated area. Public routes: /login, /e/* (customer links), /api/public/*.
+// every request and gate the authenticated area. Public routes: /login, /auth/* (OAuth callback), /e/* (customer links), /api/public/*.
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -26,6 +26,7 @@ export async function proxy(request: NextRequest) {
 
   const isPublic =
     pathname.startsWith("/login") ||
+    pathname.startsWith("/auth/") ||
     pathname.startsWith("/e/") ||
     pathname.startsWith("/api/public");
 

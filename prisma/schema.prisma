@@ -38,6 +38,7 @@ model Organization {
   state        String?
   postalCode   String?
   country      String  @default("US") // ISO 3166-1 alpha-2
+  trade        String? // specialty picked at onboarding (see src/lib/trades.ts); drives starter catalog + copy
 
   // Branding
   logoUrl         String?

@@ -37,7 +37,44 @@ Atualizado em 2026-09-16. Commits desta rodada: `8f25a6d`, `35b57e5`, `8f27ab7`.
 | Settings → "Your signature" continua funcionando (foi refatorado pra usar o mesmo canvas) | Settings → desenhar → Save → aparece como "Prepared by" no estimate. Testar também o modo **Type** |
 | Altura do canvas em tela pequena | Conferir no celular que o canvas não fica gigante nem minúsculo |
 
-### 1.4 Regressão rápida (nada disso mudou, mas passa por código tocado)
+### 1.4 Change orders (adendo ao orçamento aceito)
+
+O diferencial de construction: o cliente pediu algo a mais no meio da obra → o contractor cria um change order, o cliente aprova (assina) pelo link, e o valor entra na fatura. Pode ser negativo (crédito por escopo removido).
+
+| Item | Como testar |
+|---|---|
+| Botão **Change order** aparece no topo e no painel de um estimate **ACCEPTED** (e no menu do botão direito) | Abrir um estimate aceito → clicar → abre o editor em modo change order (cliente, endereço e imposto já vêm do orçamento; sem desconto/depósito/validade) |
+| Número vira `EST-1001-CO1`, `-CO2`… | Salvar → conferir o número no topo |
+| Rate **negativa** = crédito | Adicionar uma linha com rate `-300` → total fica negativo/abatido; o documento mostra "Credit" em vez de "Change total" |
+| Documento mostra "Original estimate · Previously approved changes · This change order · Revised contract total" | Ver o preview no editor e a página `/e/<token>` |
+| Cliente aprova pelo link (nome + assinatura opcional), igual ao estimate | Copiar link → abrir anônimo → **Accept change order** |
+| Card **Change orders** no estimate original lista os COs com status e mostra **Revised total** (só soma os aceitos) | Voltar no estimate pai |
+| **Convert to invoice** inclui as linhas dos change orders aceitos (prefixo `EST-1001-CO1:`) e recalcula os totais | Aceitar o CO → converter o estimate pai → conferir a fatura |
+| Filtro **Change orders** na lista de estimates | `/estimates?f=changes` |
+| E-mails falam "change order" | Enviar por e-mail / aceitar pelo link com `RESEND_API_KEY` |
+| Testes: `npm test` → 16 passed (2 novos de crédito negativo) | — |
+
+Limitações conhecidas: se a fatura já foi criada antes do CO ser aceito, ela não é atualizada sozinha (edite a fatura). Duplicar um CO cria outro CO no mesmo estimate.
+
+### 1.5 Login + onboarding no estilo InvoiceFly
+
+Layout em duas colunas (foto à esquerda, ação à direita), wizard de 3 passos com barra de progresso e tela final "Account created!" mostrando um estimate real com o nome/logo do cliente.
+
+| Item | Como testar |
+|---|---|
+| `/login?mode=signup` → "Try Estimate Builder for free", opções **Google** e **Email**; pill no canto superior direito alterna Sign in / Create account | Abrir deslogado |
+| Clicar **Email** expande o formulário no lugar; "Other options" volta | — |
+| **Google** precisa ser ligado no Supabase (Authentication → Providers → Google, com client ID/secret do Google Cloud e redirect `https://<projeto>.supabase.co/auth/v1/callback`). Sem isso o botão mostra um erro amigável | Depois de configurar: login com Google → cai em `/onboarding` (novo) ou `/dashboard` |
+| Onboarding passo 1: **Business name** (obrigatório) | Criar conta nova |
+| Passo 2: **Your trade** — busca + lista (General contractor, Painting, Flooring, Drywall…). A escolha define o catálogo inicial (ex.: Painting só recebe itens de pintura/drywall/labor) | Escolher "Painting" → depois em **Services** conferir que não veio cerca/deck |
+| Passo 3: **Add your logo** (opcional, sobe pro bucket `logos` na hora) — botão vira "Continue" com logo, "Skip for now" sem | — |
+| Tela final: check azul + "Account created!" + preview do estimate com o nome/logo escolhidos → **Start estimating** | — |
+| Seta de voltar funciona entre os passos; a barra de progresso enche por passo | — |
+| Campo `trade` salvo na org | Supabase: `select name, trade from "Organization" order by "createdAt" desc limit 3;` |
+
+Fotos são do Unsplash (URLs em `src/components/auth/split-shell.tsx`) — trocar por fotos próprias antes do lançamento. Apple e "Comece como convidado" da referência ficaram de fora (Apple exige conta de desenvolvedor Apple; convidado exige login anônimo — ambos possíveis depois).
+
+### 1.6 Regressão rápida (nada disso mudou, mas passa por código tocado)
 
 - Criar estimate → Send → abrir link público → status vira VIEWED → e-mail de notificação chega (se `RESEND_API_KEY` setado)
 - Declinar pelo link público com motivo
@@ -83,6 +120,7 @@ Recomendação: **Connect**, porque "aceitar e já pagar o sinal" é o que difer
 | # | Item | Esforço | Por que |
 |---|---|---|---|
 | 1 | **Deploy** Vercel + Supabase prod (checklist de env vars, domínio no Resend, `NEXT_PUBLIC_APP_URL`) | pequeno | Sem isso nada acima chega em cliente |
+| 1b | **Domínio próprio no Supabase Auth** (`auth.seudominio.com`) — hoje a tela do Google mostra `xgjsbkotntiwtwwxhsaz.supabase.co`. Precisa do plano Pro (US$ 25/mês) + add-on custom domain (US$ 10/mês); depois trocar o redirect URI no Google Cloud. Também pedir a **verificação do app OAuth** no Google (grátis, exige política de privacidade publicada) pra sumir o aviso "app não verificado" | pequeno | Decidido em 2026-09-16: fazer só no lançamento, junto com o deploy |
 | 2 | Rate limiter em Redis/Upstash | pequeno | O atual é em memória — some com mais de uma instância na Vercel |
 | 3 | Lembrete automático: estimate SENT sem resposta em X dias → e-mail ao cliente (com cron da Vercel) | médio | Aumenta taxa de aceite sem trabalho do contractor |
 | 4 | Testes do fluxo de aceite público (`/e/[token]/actions.ts`) com Prisma mockado | médio | É a parte com mais regra de negócio e zero cobertura |
