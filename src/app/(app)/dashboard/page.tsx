@@ -116,7 +116,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <Link href="/estimates" className="text-sm text-accent inline-flex items-center gap-1">All <ArrowRight className="h-3.5 w-3.5" /></Link>
         </div>
         {recent.length === 0 ? (
-          <EmptyState icon={FileText} title="No estimates yet" description="Create your first estimate — it takes about two minutes." action={<Link href="/estimates/new" className={buttonVariants()}>New estimate</Link>} />
+          <EmptyState icon={FileText} title="No estimates yet" description="Create your first estimate. It takes about two minutes." action={<Link href="/estimates/new" className={buttonVariants()}>New estimate</Link>} />
         ) : (
           <ul className="divide-y divide-border">
             {recent.map((e) => {
