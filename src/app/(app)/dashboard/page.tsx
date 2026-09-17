@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AlertCircle, ArrowRight, BadgeDollarSign, ChevronRight, Clock, FileText, Plus, Sun, Target, Trophy, Users } from "lucide-react";
+import { AlertCircle, ArrowRight, BadgeDollarSign, ChevronRight, Clock, FileText, Plus, Target, Trophy, Users } from "lucide-react";
+import { Greeting } from "@/components/greeting";
 import { requireOrg } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { expireStaleEstimates } from "@/lib/estimates/expire";
@@ -47,9 +48,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const owed = Number(unpaid._sum.total ?? 0) - Number(unpaid._sum.amountPaid ?? 0);
   const overdueAmt = Number(overdue._sum.total ?? 0) - Number(overdue._sum.amountPaid ?? 0);
   const monthLabel = now.toLocaleDateString(org.locale, { month: "short", year: "numeric" });
-  const hour = now.getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const firstName = (user.fullName ?? org.name).split(" ")[0];
   const yearLabel = String(now.getFullYear());
 
   // Setup nudges — the "Stripe account incomplete" card from the reference, for the things that make a document look pro
@@ -63,13 +61,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   return (
     <div className="space-y-5 pb-24 md:pb-8">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="h-11 w-11 rounded-full bg-brand text-brand-foreground grid place-items-center shrink-0"><Sun className="h-5 w-5" /></span>
-          <div>
-            <h1 className="text-2xl font-semibold leading-tight">{greeting}, {firstName}!</h1>
-            <p className="text-sm text-muted">{org.name} · {now.toLocaleDateString(org.locale, { weekday: "long", month: "long", day: "numeric" })}</p>
-          </div>
-        </div>
+        <Greeting name={user.fullName?.split(" ")[0] ?? org.name} orgName={org.name} locale={org.locale} />
         <Link href="/settings?tab=upgrade" className={cn("inline-flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-semibold", org.plan === "PRO" ? "bg-warning text-white" : "bg-surface border border-border text-muted hover:text-foreground")}>
           {org.plan === "PRO" ? "PRO" : "Free plan"}
         </Link>
