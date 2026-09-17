@@ -142,7 +142,21 @@ Como na referência: no **Preview** do editor tem uma régua embaixo com abas **
 
 Como testar: editor → Preview → trocar modelo (muda na hora) → aba Color → escolher → "Saved to your brand" → Save → abrir outro documento: cor mantida.
 
-### 1.11 Regressão rápida (nada disso mudou, mas passa por código tocado)
+### 1.11 Home refeito (no espírito da referência)
+
+| Item | Como testar |
+|---|---|
+| Cartões de período **mês / ano** (clicáveis) com valor ganho e quantidade | Clicar em cada um → o número grande muda |
+| Número grande = **ganho no período** (estimates aceitos); embaixo **Outstanding** em vermelho (saldo de faturas em aberto) + "N overdue" | — |
+| 4 stats: Awaiting response · Unpaid invoices (vermelho se tem vencida) · Win rate · Clients — todos clicáveis | — |
+| **Alertas de configuração** (estilo "Stripe incompleto"): logo, imposto, payment instructions, assinatura — só os que faltam, no máximo 2 | Preencher em Settings → somem |
+| Lista **Recent** com avatar do cliente, número, valor e etiqueta **Due today / Due in 3d / Overdue 5d** em faturas | — |
+| Botão grande **Create estimate** em degradê: fixo acima da barra no celular, inline no desktop | — |
+| Pill **Free plan / PRO** no canto → Upgrade | — |
+
+Cortado: microfone e a bolinha de paginação.
+
+### 1.12 Regressão rápida (nada disso mudou, mas passa por código tocado)
 
 - Criar estimate → Send → abrir link público → status vira VIEWED → e-mail de notificação chega (se `RESEND_API_KEY` setado)
 - Declinar pelo link público com motivo
