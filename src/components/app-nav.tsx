@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, LayoutDashboard, LogOut, Plus, Receipt, Settings, UserPlus, Users, Wrench } from "lucide-react";
+import { Crown, FileText, LayoutDashboard, LogOut, Plus, Receipt, Settings, UserPlus, Users, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/app/(auth)/login/actions";
 import { Logo } from "@/components/brand/logo";
@@ -24,11 +24,13 @@ const quickActions = [
   { href: "/settings", label: "Settings", sub: "Business, branding, defaults", icon: Settings },
 ] as const;
 
-export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {
+export function AppNav({ orgName, logoUrl, primaryColor, userEmail, userName, plan }: {
   orgName: string;
   logoUrl: string | null;
   primaryColor: string;
   userEmail: string;
+  userName: string | null;
+  plan: "FREE" | "PRO";
 }) {
   const pathname = usePathname();
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
@@ -48,7 +50,7 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {
             <Plus className="h-4 w-4" /> New estimate
           </Link>
         </div>
-        <nav className="flex-1 px-3 pt-2 space-y-1.5">
+        <nav className="flex-1 px-3 pt-3 space-y-2.5">
           {items.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
@@ -63,21 +65,30 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {
           ))}
         </nav>
         <div className="p-3 border-t border-white/10">
-          <div className="flex items-center gap-2.5 px-3 pb-3">
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt="" className="h-7 w-7 rounded-md object-contain bg-white" />
-            ) : (
-              <span className="h-7 w-7 rounded-md grid place-items-center text-[11px] font-bold text-white" style={{ background: primaryColor }}>{orgName.charAt(0)}</span>
-            )}
-            <span className="text-xs font-medium text-white/80 truncate">{orgName}</span>
+          <div className="rounded-2xl bg-white/[0.06] p-3">
+            <div className="flex items-center gap-3">
+              <span className="relative shrink-0">
+                {logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={logoUrl} alt="" className="h-11 w-11 rounded-xl object-contain bg-white p-0.5" />
+                ) : (
+                  <span className="h-11 w-11 rounded-xl grid place-items-center text-sm font-bold text-white" style={{ background: primaryColor }}>{orgName.charAt(0)}</span>
+                )}
+                {plan === "PRO" && <span className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-brand text-brand-foreground grid place-items-center ring-2 ring-[#0b0b0b]"><Crown className="h-3 w-3" /></span>}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold truncate">{userName ?? orgName}</span>
+                <span className="block text-[11px] text-white/50 truncate">{userName ? orgName : userEmail}</span>
+              </span>
+              <form action={logout}>
+                <button className="h-9 w-9 rounded-lg grid place-items-center text-white/50 hover:bg-white/10 hover:text-white" aria-label="Sign out" title="Sign out"><LogOut className="h-4 w-4" /></button>
+              </form>
+            </div>
+            <Link href="/settings?tab=upgrade" className={cn("mt-3 flex items-center justify-between rounded-xl px-3 h-9 text-xs font-semibold", plan === "PRO" ? "bg-brand/15 text-brand" : "bg-white/10 text-white/80 hover:bg-white/15")}>
+              <span className="inline-flex items-center gap-1.5"><Crown className="h-3.5 w-3.5" /> {plan === "PRO" ? "Pro plan" : "Free plan"}</span>
+              <span className={plan === "PRO" ? "text-brand/70" : "text-brand"}>{plan === "PRO" ? "Active" : "Upgrade →"}</span>
+            </Link>
           </div>
-          <form action={logout}>
-            <button className="flex w-full items-center gap-3 rounded-lg px-3 h-10 text-sm text-white/60 hover:bg-white/5 hover:text-white">
-              <LogOut className="h-4 w-4" />
-              <span className="truncate">{userEmail}</span>
-            </button>
-          </form>
         </div>
       </aside>
 
