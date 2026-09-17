@@ -54,7 +54,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const nudges = [
     !org.logoUrl && { title: "Add your logo", sub: "It goes on the top of every estimate and invoice.", href: "/settings?tab=branding" },
     Number(org.defaultTaxRate) === 0 && { title: "Set your sales tax rate", sub: "Applied to taxable lines by default. Leave 0 if you don't charge tax.", href: "/settings?tab=defaults" },
-    !org.paymentInstructions && { title: "Add payment instructions", sub: "Zelle, check, bank details — printed on every invoice so you get paid faster.", href: "/settings?tab=defaults" },
+    !org.paymentInstructions && { title: "Add payment instructions", sub: "Zelle, check or bank details, printed on every invoice so you get paid faster.", href: "/settings?tab=defaults" },
     !org.signatureDataUrl && !org.signatureName && { title: "Add your signature", sub: "Stamped next to the customer's on accepted estimates.", href: "/settings?tab=signature" },
   ].filter((x): x is { title: string; sub: string; href: string } => !!x).slice(0, 2);
 
@@ -98,13 +98,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {nudges.length > 0 && (
         <div className="space-y-2">
           {nudges.map((n) => (
-            <Link key={n.href + n.title} href={n.href} className="flex items-center gap-3 rounded-xl bg-accent-soft/70 border border-accent/20 px-4 py-3 hover:bg-accent-soft">
-              <span className="h-9 w-9 rounded-full bg-danger-soft text-danger grid place-items-center shrink-0"><AlertCircle className="h-4 w-4" /></span>
+            <Link key={n.href + n.title} href={n.href} className="flex items-center gap-3 rounded-xl bg-danger text-white px-4 py-3 hover:bg-danger/90">
+              <span className="h-9 w-9 rounded-full bg-white/15 grid place-items-center shrink-0"><AlertCircle className="h-4 w-4" /></span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium">{n.title}</span>
-                <span className="block text-xs text-muted">{n.sub}</span>
+                <span className="block text-sm font-semibold">{n.title}</span>
+                <span className="block text-xs text-white/80">{n.sub}</span>
               </span>
-              <ChevronRight className="h-4 w-4 text-muted" />
+              <ChevronRight className="h-4 w-4 text-white/80" />
             </Link>
           ))}
         </div>
