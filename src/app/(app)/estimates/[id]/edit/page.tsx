@@ -13,8 +13,7 @@ export default async function EditEstimatePage({ params }: { params: Promise<{ i
   if (estimate.status === "ACCEPTED") redirect(`/estimates/${id}`);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Edit {estimate.kind === "CHANGE_ORDER" ? "change order " : ""}{estimate.number}</h1>
+    <div>
       <EstimateEditor {...data} estimate={estimate} />
     </div>
   );

@@ -10,8 +10,7 @@ export default async function NewEstimatePage({ searchParams }: { searchParams: 
   const preselect = client && data.clients.some((c) => c.id === client) ? client : undefined;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">New estimate</h1>
+    <div>
       <EstimateEditor {...data} preselectClientId={preselect} />
     </div>
   );

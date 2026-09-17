@@ -14,8 +14,7 @@ export default async function NewChangeOrderPage({ params }: { params: Promise<{
   if (parent.status !== "ACCEPTED") redirect(`/estimates/${id}`);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">New change order</h1>
+    <div>
       <EstimateEditor {...data} changeOrderOf={parent} />
     </div>
   );

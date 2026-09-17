@@ -107,7 +107,21 @@ Das telas do editor/preview da referência, ficou: **registro de pagamentos** (s
 | Editor de fatura não tem mais campo "Deposit already paid" | — |
 | Página do documento tem ícone 🎨 → Settings › Branding, com **paleta de 14 cores** de um toque | — |
 
-### 1.8 Regressão rápida (nada disso mudou, mas passa por código tocado)
+### 1.8 Editor de estimate refeito (formato de documento)
+
+Mescla do nosso editor com o da referência: uma coluna só, no formato do documento (número + datas → Cliente → Itens → Totais → Notas → Fotos → Look). O preview deixou de ficar espremido ao lado: botão **Preview** no topo abre o documento em tamanho real, com Save ali mesmo. Bugs corrigidos de quebra: **datas vazias** (dd/mm/aaaa) ao editar e o campo de imposto mostrando fração em vez de porcentagem.
+
+| Item | Como testar |
+|---|---|
+| Barra fixa no topo: ← voltar · "Edit estimate" · número + total · **Preview** · **Save** | Abrir `/estimates/new` e um estimate existente em edit |
+| Datas preenchidas ao editar (Date / Valid until; Due date em invoice) | Editar um estimate → as datas aparecem |
+| Cliente: botão azul grande **Add client** → seletor + "New"; escolhido vira linha com avatar, contato e **Change** | — |
+| Itens: nome + valor da linha na mesma linha; qty × unidade × rate embaixo; **Add item** azul; busca no price book continua | — |
+| Totais: Subtotal · **+ Add discount** (só aparece o controle quando pedir) · imposto com % editável inline · **Total** grande · **+ Add deposit** | Imposto: digitar 8.25 → documento mostra 8.25% |
+| Preview abre em tela cheia; **Back to edit** volta; erro de validação fecha o preview e mostra no formulário | — |
+| Change order: mostra "Change order for EST-…" no topo, sem desconto/depósito/validade, e "Revised contract total" nos totais | — |
+
+### 1.9 Regressão rápida (nada disso mudou, mas passa por código tocado)
 
 - Criar estimate → Send → abrir link público → status vira VIEWED → e-mail de notificação chega (se `RESEND_API_KEY` setado)
 - Declinar pelo link público com motivo
