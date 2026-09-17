@@ -26,7 +26,6 @@ const businessSchema = z.object({
 const brandingSchema = z.object({
   primaryColor: hex,
   accentColor: hex,
-  appColor: z.union([z.literal(""), hex]).transform((v) => (v === "" ? null : v)),
   defaultTemplate: z.enum(["CLEAN", "BOLD", "CLASSIC", "NOIR", "MINIMAL", "EXECUTIVE"]),
 });
 

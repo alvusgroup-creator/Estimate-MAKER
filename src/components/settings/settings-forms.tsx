@@ -74,7 +74,6 @@ export function BrandingForm({ org }: { org: OrgSettings }) {
   const [logoState, logoAction, logoPending] = useActionState(uploadLogo, undefined);
   const [primary, setPrimary] = useState(org.primaryColor);
   const [accent, setAccent] = useState(org.accentColor);
-  const [appColor, setAppColor] = useState(org.appColor ?? "");
   const [template, setTemplate] = useState<Template>(org.defaultTemplate);
 
   const sample = {
@@ -135,13 +134,6 @@ export function BrandingForm({ org }: { org: OrgSettings }) {
                 <ColorField name="primaryColor" label="Document primary" value={primary} onChange={setPrimary} hint="Headings, totals, table header" />
                 <ColorField name="accentColor" label="Document accent" value={accent} onChange={setAccent} hint="Highlights" />
               </div>
-              <Field label="App color" hint="Tints buttons and active items in the app. Leave empty for the Alvus yellow.">
-                <div className="flex items-center gap-2">
-                  <input type="color" value={appColor || "#F5C518"} onChange={(e) => setAppColor(e.target.value)} className="h-10 w-12 rounded-lg border border-border bg-surface p-1 cursor-pointer" aria-label="App color picker" />
-                  <Input name="appColor" value={appColor} onChange={(e) => setAppColor(e.target.value)} className="font-mono uppercase" maxLength={7} placeholder="Default" />
-                  {appColor && <Button type="button" variant="ghost" size="sm" onClick={() => setAppColor("")}>Reset</Button>}
-                </div>
-              </Field>
               <Field label="Default template">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {TEMPLATES.map((t) => (
