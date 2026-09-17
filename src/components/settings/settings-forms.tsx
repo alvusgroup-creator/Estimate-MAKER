@@ -135,9 +135,9 @@ export function BrandingForm({ org }: { org: OrgSettings }) {
                 <ColorField name="primaryColor" label="Document primary" value={primary} onChange={setPrimary} hint="Headings, totals, table header" />
                 <ColorField name="accentColor" label="Document accent" value={accent} onChange={setAccent} hint="Highlights" />
               </div>
-              <Field label="App color" hint="Tints the app itself — sidebar, buttons, active tabs. Leave empty for the default dark theme.">
+              <Field label="App color" hint="Tints buttons and active items in the app. Leave empty for the Alvus yellow.">
                 <div className="flex items-center gap-2">
-                  <input type="color" value={appColor || "#111827"} onChange={(e) => setAppColor(e.target.value)} className="h-10 w-12 rounded-lg border border-border bg-surface p-1 cursor-pointer" aria-label="App color picker" />
+                  <input type="color" value={appColor || "#F5C518"} onChange={(e) => setAppColor(e.target.value)} className="h-10 w-12 rounded-lg border border-border bg-surface p-1 cursor-pointer" aria-label="App color picker" />
                   <Input name="appColor" value={appColor} onChange={(e) => setAppColor(e.target.value)} className="font-mono uppercase" maxLength={7} placeholder="Default" />
                   {appColor && <Button type="button" variant="ghost" size="sm" onClick={() => setAppColor("")}>Reset</Button>}
                 </div>

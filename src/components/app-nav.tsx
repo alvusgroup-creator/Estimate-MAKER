@@ -35,11 +35,11 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:w-64 md:flex-col md:border-r md:border-border md:bg-surface md:sticky md:top-0 md:h-screen">
-        <Link href="/dashboard" className="flex flex-col items-center justify-center gap-3 px-5 pt-7 pb-5 border-b border-border">
+      <aside className="hidden md:flex md:w-64 md:flex-col md:sticky md:top-0 md:h-screen bg-[#0b0b0b] text-white">
+        <Link href="/dashboard" className="flex flex-col items-center justify-center gap-3 px-5 pt-7 pb-5 border-b border-white/10">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt={orgName} className="h-20 w-full max-w-[200px] object-contain" />
+            <img src={logoUrl} alt={orgName} className="h-20 w-full max-w-[200px] object-contain rounded-lg bg-white p-2" />
           ) : (
             <div className="h-20 w-20 rounded-2xl grid place-items-center text-white text-3xl font-bold" style={{ background: primaryColor }}>
               {orgName.charAt(0)}
@@ -50,7 +50,7 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {
         <div className="p-3">
           <Link
             href="/estimates/new"
-            className="flex items-center justify-center gap-2 h-10 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
+            className="flex items-center justify-center gap-2 h-10 rounded-lg bg-brand text-brand-foreground text-sm font-semibold hover:bg-brand/90"
           >
             <Plus className="h-4 w-4" /> New estimate
           </Link>
@@ -62,17 +62,17 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {
               href={href}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 h-10 text-sm",
-                isActive(href) ? "bg-accent-soft text-accent font-medium" : "text-muted hover:bg-black/5 hover:text-foreground",
+                isActive(href) ? "bg-white/10 text-brand font-semibold" : "text-white/60 hover:bg-white/5 hover:text-white",
               )}
             >
               <Icon className="h-4 w-4" /> {label}
             </Link>
           ))}
         </nav>
-        <div className="p-3 border-t border-border">
-          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted/70">EasyInvoice · by Alvus</p>
+        <div className="p-3 border-t border-white/10">
+          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">EasyInvoice · by Alvus</p>
           <form action={logout}>
-            <button className="flex w-full items-center gap-3 rounded-lg px-3 h-10 text-sm text-muted hover:bg-black/5 hover:text-foreground">
+            <button className="flex w-full items-center gap-3 rounded-lg px-3 h-10 text-sm text-white/60 hover:bg-white/5 hover:text-white">
               <LogOut className="h-4 w-4" />
               <span className="truncate">{userEmail}</span>
             </button>
@@ -81,7 +81,7 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {
       </aside>
 
       {/* Mobile bottom bar */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface border-t border-border grid grid-cols-5 h-16 pb-[env(safe-area-inset-bottom)]">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0b0b0b] text-white grid grid-cols-5 h-16 pb-[env(safe-area-inset-bottom)]">
         {items.slice(0, 2).map(({ href, label, icon: Icon }) => (
           <MobileItem key={href} href={href} label={label} Icon={Icon} active={isActive(href)} />
         ))}
@@ -96,7 +96,7 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {
 
 function MobileItem({ href, label, Icon, active }: { href: string; label: string; Icon: typeof FileText; active: boolean }) {
   return (
-    <Link href={href} className={cn("flex flex-col items-center justify-center gap-0.5 text-[11px]", active ? "text-accent font-medium" : "text-muted")}>
+    <Link href={href} className={cn("flex flex-col items-center justify-center gap-0.5 text-[11px]", active ? "text-brand font-semibold" : "text-white/60")}>
       <Icon className="h-5 w-5" />
       {label}
     </Link>
@@ -127,7 +127,7 @@ function QuickAddButton({ pathname }: { pathname: string }) {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-label={open ? "Close" : "Create"}
-        className={cn("h-12 w-12 -mt-6 rounded-full bg-primary text-primary-foreground grid place-items-center shadow-lg transition-transform", open && "rotate-45")}
+        className={cn("h-12 w-12 -mt-6 rounded-full bg-brand text-brand-foreground grid place-items-center shadow-lg ring-4 ring-[#0b0b0b] transition-transform", open && "rotate-45")}
       >
         <Plus className="h-6 w-6" />
       </button>

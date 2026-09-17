@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   // Org-chosen app color overrides the theme's primary + accent for the whole authenticated area
   const theme = org.appColor
-    ? ({ "--primary": org.appColor, "--primary-foreground": readableOn(org.appColor), "--accent": org.appColor, "--accent-soft": `color-mix(in srgb, ${org.appColor} 10%, white)` } as CSSProperties)
+    ? ({ "--primary": org.appColor, "--primary-foreground": readableOn(org.appColor), "--brand": org.appColor, "--brand-foreground": readableOn(org.appColor), "--accent": org.appColor, "--accent-soft": `color-mix(in srgb, ${org.appColor} 10%, white)` } as CSSProperties)
     : undefined;
 
   return (

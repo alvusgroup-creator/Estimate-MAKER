@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f7f9;
+  --background: #f1f1f1;
   --surface: #ffffff;
   --foreground: #111827;
   --muted: #6b7280;
-  --border: #e5e7eb;
+  --border: #e3e3e3;
   --primary: #0b0b0b;
   --primary-foreground: #ffffff;
   /* Alvus yellow for fills (buttons, bars) — always with near-black text on top */
