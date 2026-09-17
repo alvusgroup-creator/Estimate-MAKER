@@ -192,7 +192,45 @@ Conta de teste criada no Supabase: `mobile.tour.easyinvoice@gmail.com` (pode apa
 
 ---
 
-## 2. Próximo: Stripe — decisões que preciso de você
+## 2. TO-DO (atualizado 2026-09-17)
+
+### 2.1 Coisas que só você pode fazer
+
+- [ ] **Decidir o Stripe** (seção 3 abaixo): Connect ou só plano Pro · preço do Pro e limites do Free · trial ou não. Sem isso o "Upgrade to Pro" fica só de vitrine.
+- [ ] **Testar o fluxo inteiro com uma conta real** no celular: criar conta → onboarding → estimate → enviar link → aceitar assinando → converter em fatura → registrar pagamento. Me mandar print do que estranhar.
+- [ ] **Deploy** (Vercel + Supabase prod): domínio, `NEXT_PUBLIC_APP_URL`, chave do Resend com domínio verificado, Google OAuth apontando pro domínio final, `NEXT_PUBLIC_SUPPORT_EMAIL`.
+- [ ] **Domínio próprio no Supabase Auth** e verificação do app no Google (pra sumir o `xgjs….supabase.co` e o aviso "app não verificado") — só no lançamento.
+- [ ] **Fotos definitivas** do login/onboarding (hoje são Unsplash) e a **logo em PNG/SVG oficial** exportada pro marketing.
+- [ ] **Textos legais**: Termos de uso e Política de privacidade (o Google exige a política pra verificar o OAuth; a Apple também se um dia entrar).
+- [ ] **Nome nas lojas/domínio**: registrar `easyinvoice.app` (ou similar) e checar se "EasyInvoice" não conflita com marca registrada nos EUA (busca rápida no USPTO).
+- [ ] **Preencher a própria conta** (logo, imposto, payment instructions, assinatura) pra ver o Home sem alertas e os documentos completos.
+- [ ] Apagar a conta de teste `mobile.tour.easyinvoice@gmail.com` no Supabase quando não precisar mais.
+
+### 2.2 O que eu faço em seguida (ordem que eu sugiro)
+
+1. **Stripe** assim que você decidir (Pro + gate de features; Connect pro depósito se for o caso).
+2. **Lembrete automático** pro cliente: estimate enviado e sem resposta em 3 dias → e-mail "ainda está de pé?". Hoje o contractor tem que lembrar de cobrar.
+3. **Lembrete de fatura vencida** pro cliente + aviso pro contractor no Home (já mostramos "overdue", falta o e-mail).
+4. **Tour guiado no primeiro login** (os balões "toque aqui" da referência) — item parado no backlog, faz sentido antes do lançamento.
+5. **Rate limiter em Redis** (Upstash): o atual é em memória e se perde com mais de uma instância na Vercel.
+6. **Testes do link público** (aceite, assinatura, change order, pagamento) — é a parte com mais regra e zero cobertura.
+7. **Exportar CSV** de clientes e documentos (quem migra de planilha pede).
+8. **Auditoria de segurança** dos server actions antes do deploy (`/security-review`).
+
+### 2.3 Ideias minhas (pra você aprovar ou cortar)
+
+- **Fases + cronograma de pagamento**: orçamento dividido em etapas (demo, drywall, pintura) e a fatura cobra por etapa concluída. É o segundo diferencial de construction que ficou pra depois do change order.
+- **Fotos antes/depois por etapa** no documento final: o cliente vê o que pagou. Já temos fotos; falta a etiqueta.
+- **"Estimate por foto"**: contractor tira foto do ambiente, a IA sugere as linhas do orçamento (já temos IA de revisão; isso vira criação). Forte pra marketing.
+- **Modo "obra rápida"** no editor: 3 campos (cliente, o que vai fazer, valor) e pronto — pro handyman que faz 5 orçamentos por dia.
+- **Assinatura do contractor via celular** sem passar pelo Settings (botão "assinar agora" no primeiro estimate).
+- **Link do cliente com "Pagar agora"** via Stripe (depende da decisão A).
+- **Idioma do cliente**: o link público em espanhol quando o cliente prefere (muito contractor americano atende cliente hispano). Só o link, o app fica em inglês.
+- **Duplicar estimate como modelo**: "salvar como template" pra obras repetidas (banheiro padrão, pintura de sala).
+- **Relatório mensal por e-mail** pro contractor: quanto cotou, ganhou, recebeu — o Home em formato de e-mail no dia 1.
+- **Widget/atalho na tela inicial do celular** (PWA instalável) com ícone da EasyInvoice — o app já é responsivo; falta o manifest.
+
+## 3. Stripe — decisões que preciso de você
 
 Antes de codar, 3 decisões:
 
@@ -220,12 +258,12 @@ Recomendação: **Connect**, porque "aceitar e já pagar o sinal" é o que difer
 
 ---
 
-## 3. Direção do produto (anotado 2026-09-16)
+## 4. Direção do produto (anotado 2026-09-16)
 
 - **Um app por nicho.** Este aqui é o de **construction** (GC, pintura, drywall, piso, exterior, landscaping). Outros nichos (ex.: limpeza, HVAC, beleza) ganham um clone próprio depois — não vamos colocar seletor de nicho dentro deste código.
 - Consequência prática: catálogo inicial, textos, templates e prompt da IA podem falar a língua da obra sem medo de "genérico demais".
 
-## 4. Outras coisas que posso fazer (ordem sugerida)
+## 5. Backlog antigo (mantido pra referência)
 
 | # | Item | Esforço | Por que |
 |---|---|---|---|
@@ -241,4 +279,4 @@ Recomendação: **Connect**, porque "aceitar e já pagar o sinal" é o que difer
 | 9 | **Tour guiado no primeiro login** — pop-up step-by-step (ex.: "1. Configure sua marca → 2. Adicione um cliente → 3. Crie seu primeiro estimate → 4. Envie o link"), com progresso salvo na org e opção de pular. Diferente do `/onboarding` atual, que só coleta dados da empresa | médio | Pedido do Felipe em 2026-09-16 |
 | 10 | Auditoria de segurança dos server actions (`/security-review`) antes do deploy | pequeno | Todo action deve passar por `requireOrg` e filtrar por `organizationId` |
 
-Me diga as decisões do item 2 (A, B, C) e eu começo pelo Stripe; se preferir, faço o item 3.1 (deploy) antes, que destrava você testar tudo isso em produção.
+Me diga as decisões do item 3 (A, B, C) e eu começo pelo Stripe; se preferir, faço o item 3.1 (deploy) antes, que destrava você testar tudo isso em produção.
