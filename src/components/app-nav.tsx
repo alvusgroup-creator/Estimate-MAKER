@@ -39,10 +39,10 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail, userName, pl
     <>
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:w-72 md:flex-col md:sticky md:top-0 md:h-screen bg-[#0b0b0b] text-white">
-        <Link href="/dashboard" className="flex items-center px-5 h-[72px] border-b border-white/10">
+        <Link href="/dashboard" className="flex items-center px-6 h-[88px] border-b border-white/10">
           <Logo size="md" tone="dark" />
         </Link>
-        <div className="p-4 pb-1">
+        <div className="px-4 pt-6 pb-2">
           <Link
             href="/estimates/new"
             className="flex items-center justify-center gap-2 h-12 rounded-xl bg-brand text-brand-foreground text-[15px] font-semibold hover:bg-brand/90"
@@ -50,7 +50,7 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail, userName, pl
             <Plus className="h-4 w-4" /> New estimate
           </Link>
         </div>
-        <nav className="flex-1 px-3 pt-3 space-y-2.5">
+        <nav className="flex-1 px-4 pt-5 space-y-3">
           {items.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
