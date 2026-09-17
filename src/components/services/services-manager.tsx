@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CopyPlus, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { CopyPlus, Pencil, Plus, Search, Trash2, Wrench, X } from "lucide-react";
 import { ContextMenu } from "@/components/ui/context-menu";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
@@ -61,7 +61,7 @@ export function ServicesManager({ initial, currency, locale, startNew }: { initi
       )}
 
       {grouped.length === 0 ? (
-        <Card><EmptyState title={q ? "No matches" : "No services yet"} description={q ? undefined : "Add the services you quote most. They become one-tap line items in the estimate builder."} /></Card>
+        <Card><EmptyState icon={Wrench} title={q ? "No matches" : "No services yet"} description={q ? undefined : "Add the services you quote most. They become one-tap line items in the estimate builder."} /></Card>
       ) : (
         grouped.map(([cat, list]) => (
           <div key={cat}>

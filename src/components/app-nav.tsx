@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, LayoutDashboard, LogOut, Plus, Settings, UserPlus, Users, Wrench } from "lucide-react";
+import { FileText, LayoutDashboard, LogOut, Plus, Receipt, Settings, UserPlus, Users, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/app/(auth)/login/actions";
 
 const items = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/estimates", label: "Estimates", icon: FileText },
+  { href: "/invoices", label: "Invoices", icon: Receipt },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/services", label: "Services", icon: Wrench },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -19,6 +20,7 @@ const quickActions = [
   { href: "/estimates/new", label: "New estimate", sub: "Quote a job", icon: FileText },
   { href: "/clients/new", label: "New client", sub: "Add to your book", icon: UserPlus },
   { href: "/services?new=1", label: "New service", sub: "Add to price book", icon: Wrench },
+  { href: "/settings", label: "Settings", sub: "Business, branding, defaults", icon: Settings },
 ] as const;
 
 export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {

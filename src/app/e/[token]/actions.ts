@@ -55,6 +55,7 @@ export async function respondToEstimate(
 
   revalidatePath(`/estimates/${e.id}`);
   revalidatePath("/estimates");
+  revalidatePath("/invoices");
   revalidatePath("/dashboard");
   return { ok: true };
 }

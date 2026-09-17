@@ -17,9 +17,17 @@ export function CardBody({ className, ...props }: React.HTMLAttributes<HTMLDivEl
   return <div className={cn("p-4", className)} {...props} />;
 }
 
-export function EmptyState({ title, description, action }: { title: string; description?: string; action?: React.ReactNode }) {
+export function EmptyState({ title, description, action, icon: Icon, tone = "accent" }: {
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+  icon?: React.ComponentType<{ className?: string }>;
+  tone?: "accent" | "warm" | "success";
+}) {
+  const tile = { accent: "bg-accent-soft text-accent", warm: "bg-warning-soft text-warning", success: "bg-success-soft text-success" }[tone];
   return (
     <div className="flex flex-col items-center justify-center text-center py-12 px-4">
+      {Icon && <div className={cn("h-14 w-14 rounded-2xl grid place-items-center mb-3", tile)}><Icon className="h-7 w-7" /></div>}
       <p className="font-medium">{title}</p>
       {description && <p className="text-sm text-muted mt-1 max-w-sm">{description}</p>}
       {action && <div className="mt-4">{action}</div>}

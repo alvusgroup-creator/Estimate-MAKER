@@ -121,6 +121,7 @@ export async function createEstimate(raw: unknown): Promise<SaveResult> {
 
   await bumpUsage(lines.map((l) => l.serviceItemId));
   revalidatePath("/estimates");
+  revalidatePath("/invoices");
   revalidatePath("/dashboard");
   return { ok: true, id: estimate.id };
 }
@@ -162,6 +163,7 @@ export async function createChangeOrder(parentId: string, raw: unknown): Promise
 
   await bumpUsage(lines.map((l) => l.serviceItemId));
   revalidatePath("/estimates");
+  revalidatePath("/invoices");
   revalidatePath(`/estimates/${parent.id}`);
   revalidatePath("/dashboard");
   return { ok: true, id: co.id };
@@ -190,6 +192,7 @@ export async function updateEstimate(id: string, raw: unknown): Promise<SaveResu
 
   revalidatePath(`/estimates/${id}`);
   revalidatePath("/estimates");
+  revalidatePath("/invoices");
   revalidatePath("/dashboard");
   return { ok: true, id };
 }
@@ -221,6 +224,7 @@ export async function setEstimateStatus(id: string, status: EstimateStatus) {
 
   revalidatePath(`/estimates/${id}`);
   revalidatePath("/estimates");
+  revalidatePath("/invoices");
   revalidatePath("/dashboard");
 }
 
@@ -287,6 +291,7 @@ export async function duplicateEstimate(id: string) {
   });
 
   revalidatePath("/estimates");
+  revalidatePath("/invoices");
   redirect(`/estimates/${copy.id}/edit`);
 }
 
@@ -294,6 +299,7 @@ export async function deleteEstimate(id: string) {
   const { orgId } = await requireOrg();
   await prisma.estimate.deleteMany({ where: { id, organizationId: orgId, status: "DRAFT" } });
   revalidatePath("/estimates");
+  revalidatePath("/invoices");
   revalidatePath("/dashboard");
   redirect("/estimates");
 }
@@ -386,6 +392,7 @@ export async function convertToInvoice(estimateId: string) {
   });
 
   revalidatePath("/estimates");
+  revalidatePath("/invoices");
   revalidatePath(`/estimates/${estimateId}`);
   redirect(`/estimates/${inv.id}`);
 }
@@ -402,6 +409,7 @@ export async function markInvoicePaid(id: string, paid: boolean) {
   });
   revalidatePath(`/estimates/${id}`);
   revalidatePath("/estimates");
+  revalidatePath("/invoices");
   revalidatePath("/dashboard");
 }
 
@@ -453,6 +461,7 @@ export async function emailEstimate(
 
   revalidatePath(`/estimates/${id}`);
   revalidatePath("/estimates");
+  revalidatePath("/invoices");
   revalidatePath("/dashboard");
   return { ok: true };
 }

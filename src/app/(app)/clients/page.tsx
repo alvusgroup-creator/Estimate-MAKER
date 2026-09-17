@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { requireOrg } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/estimates/calc";
@@ -58,6 +58,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       <Card>
         {clients.length === 0 ? (
           <EmptyState
+            icon={Users}
             title={q ? "No matches" : "No clients yet"}
             description={q ? "Try a different search." : "Clients are added automatically when you create an estimate, or add one here."}
             action={!q && <Link href="/clients/new" className={buttonVariants()}>Add client</Link>}

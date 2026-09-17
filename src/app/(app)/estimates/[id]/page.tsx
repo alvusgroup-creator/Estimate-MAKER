@@ -34,7 +34,7 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <Link href="/estimates" className={buttonVariants({ variant: "ghost", size: "icon" })} aria-label="Back"><ArrowLeft className="h-4 w-4" /></Link>
+        <Link href={estimate.kind === "INVOICE" ? "/invoices" : "/estimates"} className={buttonVariants({ variant: "ghost", size: "icon" })} aria-label="Back"><ArrowLeft className="h-4 w-4" /></Link>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold truncate">{estimate.title ?? estimate.number}</h1>

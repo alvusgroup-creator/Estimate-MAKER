@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, FileText, Plus } from "lucide-react";
 import { requireOrg } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { expireStaleEstimates } from "@/lib/estimates/expire";
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <Stat label="Awaiting response" value={money(open._sum.total)} sub={`${open._count} open`} />
-        <Stat label="Unpaid invoices" value={money(Number(unpaid._sum.total ?? 0) - Number(unpaid._sum.depositAmount ?? 0))} sub={`${unpaid._count} invoice${unpaid._count === 1 ? "" : "s"}`} href="/estimates?f=unpaid" />
+        <Stat label="Unpaid invoices" value={money(Number(unpaid._sum.total ?? 0) - Number(unpaid._sum.depositAmount ?? 0))} sub={`${unpaid._count} invoice${unpaid._count === 1 ? "" : "s"}`} href="/invoices?f=unpaid" />
         <Stat label="Won · 30 days" value={money(accepted30d._sum.total)} sub={`${accepted30d._count} accepted`} />
         <Stat label="Win rate · 30 days" value={winRate === null ? "—" : `${winRate}%`} sub={`${sent30d} sent`} />
         <Stat label="Clients" value={String(clientCount)} sub="in your book" />
@@ -71,6 +71,7 @@ export default async function DashboardPage() {
         </CardHeader>
         {recent.length === 0 ? (
           <EmptyState
+            icon={FileText}
             title="No estimates yet"
             description="Create your first estimate — it takes about two minutes."
             action={<Link href="/estimates/new" className={buttonVariants()}>New estimate</Link>}

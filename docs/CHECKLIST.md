@@ -74,7 +74,24 @@ Layout em duas colunas (foto à esquerda, ação à direita), wizard de 3 passos
 
 Fotos são do Unsplash (URLs em `src/components/auth/split-shell.tsx`) — trocar por fotos próprias antes do lançamento. Apple e "Comece como convidado" da referência ficaram de fora (Apple exige conta de desenvolvedor Apple; convidado exige login anônimo — ambos possíveis depois).
 
-### 1.6 Regressão rápida (nada disso mudou, mas passa por código tocado)
+### 1.6 Shell do app no estilo InvoiceFly (menu, listas, settings)
+
+O que foi **pego** da referência, o que foi **fundido** com o nosso e o que foi **cortado**:
+
+| Decisão | Detalhe |
+|---|---|
+| Pego: **Invoices** no menu | Item próprio na sidebar e na barra do celular (`/invoices`, filtros All / Unpaid / Paid). Links antigos `/estimates?f=invoices` redirecionam |
+| Pego: **cabeçalho do mês** nas listas | Seta ◀ ▶ troca o mês, mostra o total cotado (estimates) ou faturado (invoices) + quanto foi ganho/pago. "All time" tira o filtro; a busca ignora o mês |
+| Pego: **estados vazios** com ícone e frase de ação | Estimates, Invoices, Change orders, Clients, Services, Home |
+| Pego: **Settings como lista** | `/settings` vira menu (Account → Upgrade / Sign out; Business → Info, Branding, Signature, Tax & defaults, Notifications; Help → suporte). Cada linha abre a seção com seta de voltar. Links `?tab=` continuam funcionando |
+| Fundido: **Upgrade to Pro** | Tabela Free vs Pro pronta (`/settings?tab=upgrade`), sem checkout — diz que está em early access e é grátis. Limites da coluna Free (3 estimates/mês, sem IA) são **proposta**, confirmar antes do Stripe |
+| Fundido: **Reports** | Não criei página separada — o Home já tem os números (em aberto, ganho, win rate, a receber) |
+| Cortado: microfone (voz), Despesas, Registro de tempo, Faturas recorrentes, Agenda, Criador de logo por IA | Despesas/tempo pertencem ao módulo financeiro do upsell; recorrência/agenda é o nicho de limpeza; logo por IA não ajuda a fechar obra |
+| Suporte | Só aparece se `NEXT_PUBLIC_SUPPORT_EMAIL` estiver no `.env` |
+
+Como testar: menu lateral tem Invoices · abrir `/estimates` e trocar o mês · `/invoices?f=unpaid` · `/settings` → clicar em cada linha e voltar · `/settings?tab=upgrade`.
+
+### 1.7 Regressão rápida (nada disso mudou, mas passa por código tocado)
 
 - Criar estimate → Send → abrir link público → status vira VIEWED → e-mail de notificação chega (se `RESEND_API_KEY` setado)
 - Declinar pelo link público com motivo
