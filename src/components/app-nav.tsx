@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { FileText, LayoutDashboard, LogOut, Plus, Receipt, Settings, UserPlus, Users, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/app/(auth)/login/actions";
+import { Logo } from "@/components/brand/logo";
 
 const items = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
@@ -36,16 +37,8 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {
     <>
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:w-64 md:flex-col md:sticky md:top-0 md:h-screen bg-[#0b0b0b] text-white">
-        <Link href="/dashboard" className="flex flex-col items-center justify-center gap-3 px-5 pt-7 pb-5 border-b border-white/10">
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt={orgName} className="h-20 w-full max-w-[200px] object-contain rounded-lg bg-white p-2" />
-          ) : (
-            <div className="h-20 w-20 rounded-2xl grid place-items-center text-white text-3xl font-bold" style={{ background: primaryColor }}>
-              {orgName.charAt(0)}
-            </div>
-          )}
-          <span className="font-semibold text-sm text-center leading-tight line-clamp-2">{orgName}</span>
+        <Link href="/dashboard" className="flex items-center px-5 h-[72px] border-b border-white/10">
+          <Logo size="md" tone="dark" />
         </Link>
         <div className="p-3">
           <Link
@@ -70,7 +63,15 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {
           ))}
         </nav>
         <div className="p-3 border-t border-white/10">
-          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">EasyInvoice · by Alvus</p>
+          <div className="flex items-center gap-2.5 px-3 pb-3">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="" className="h-7 w-7 rounded-md object-contain bg-white" />
+            ) : (
+              <span className="h-7 w-7 rounded-md grid place-items-center text-[11px] font-bold text-white" style={{ background: primaryColor }}>{orgName.charAt(0)}</span>
+            )}
+            <span className="text-xs font-medium text-white/80 truncate">{orgName}</span>
+          </div>
           <form action={logout}>
             <button className="flex w-full items-center gap-3 rounded-lg px-3 h-10 text-sm text-white/60 hover:bg-white/5 hover:text-white">
               <LogOut className="h-4 w-4" />
