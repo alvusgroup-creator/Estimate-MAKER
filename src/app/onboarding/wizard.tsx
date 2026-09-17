@@ -42,7 +42,7 @@ export function OnboardingWizard({ email }: { email: string | null }) {
   if (step === 3) {
     return (
       <SplitShell photo={<DocumentPreview name={name} logoUrl={logoUrl} email={email} />}>
-        <div className="flex-1 flex flex-col items-center justify-center text-center">
+        <div className="flex-1 flex flex-col items-center justify-start lg:justify-center pt-8 lg:pt-0 text-center">
           <div className="h-24 w-24 rounded-full bg-brand text-brand-foreground grid place-items-center mb-8"><Check className="h-12 w-12" strokeWidth={3} /></div>
           <h1 className="text-3xl font-semibold tracking-tight">Account created!</h1>
           <p className="text-muted mt-2 max-w-sm">Your business is set up. Build your first estimate and send it to a customer in minutes.</p>
@@ -63,7 +63,7 @@ export function OnboardingWizard({ email }: { email: string | null }) {
         <Progress value={step + 1} max={STEPS} />
       </div>
 
-      <div className="flex-1 flex flex-col justify-center py-10 max-w-md w-full mx-auto">
+      <div className="flex-1 flex flex-col justify-start lg:justify-center py-6 lg:py-10 max-w-md w-full mx-auto">
         {step === 0 && (
           <form onSubmit={(e) => { e.preventDefault(); if (name.trim()) next(); }} className="space-y-6">
             <h1 className="text-3xl sm:text-[34px] font-semibold tracking-tight">Business information</h1>
@@ -79,7 +79,7 @@ export function OnboardingWizard({ email }: { email: string | null }) {
                   className="h-12 w-full rounded-lg bg-background pl-10 pr-3 text-[15px] placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-accent/30"
                 />
               </div>
-              <p className="mt-2 text-sm text-muted">Required — you can change it any time.</p>
+              <p className="mt-2 text-sm text-muted">Required. You can change it any time.</p>
             </div>
             <Button type="submit" size="lg" variant="accent" className="w-full h-14 text-base" disabled={!name.trim()}>Continue</Button>
           </form>
@@ -204,7 +204,7 @@ function DocumentPreview({ name, logoUrl, email }: { name: string; logoUrl: stri
   const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
   const [issueDate, expiresAt] = useMemo(() => [new Date(), daysFromNow(30)], []);
   return (
-    <div className="absolute inset-0 bg-neutral-100 flex items-center justify-center p-6 lg:p-12 overflow-hidden">
+    <div className="absolute inset-0 bg-neutral-100 flex items-start lg:items-center justify-center p-4 lg:p-12 overflow-hidden">
       <div className="w-full max-w-[640px]">
         <ScaledDocument
           className="shadow-2xl bg-white"

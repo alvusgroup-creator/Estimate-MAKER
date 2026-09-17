@@ -28,7 +28,7 @@ export function DiscoveryHint({ id = "ctx-menu" }: { id?: string }) {
   return (
     <div className="flex items-center gap-2 rounded-lg bg-accent-soft text-accent text-xs px-3 py-2">
       <MousePointerClick className="h-3.5 w-3.5 shrink-0" />
-      <span className="flex-1"><b className="font-medium">Tip:</b> right-click a row — or press and hold on your phone — for quick actions.</span>
+      <span className="flex-1"><b className="font-medium">Tip:</b> right-click a row, or press and hold on your phone, for quick actions.</span>
       <button type="button" aria-label="Dismiss" onClick={() => { try { localStorage.setItem(key, "1"); } catch {} setDismissed(true); }}><X className="h-3.5 w-3.5" /></button>
     </div>
   );

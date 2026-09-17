@@ -61,8 +61,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   return (
     <div className="space-y-5 pb-24 md:pb-8">
       <div className="flex items-start justify-between gap-4">
-        <Greeting name={user.fullName?.split(" ")[0] ?? org.name} orgName={org.name} locale={org.locale} />
-        <Link href="/settings?tab=upgrade" className={cn("inline-flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-semibold", org.plan === "PRO" ? "bg-warning text-white" : "bg-surface border border-border text-muted hover:text-foreground")}>
+        <Greeting name={user.fullName?.split(" ")[0] ?? null} orgName={org.name} locale={org.locale} />
+        <Link href="/settings?tab=upgrade" className={cn("inline-flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-semibold whitespace-nowrap shrink-0", org.plan === "PRO" ? "bg-warning text-white" : "bg-surface border border-border text-muted hover:text-foreground")}>
           {org.plan === "PRO" ? "PRO" : "Free plan"}
         </Link>
       </div>

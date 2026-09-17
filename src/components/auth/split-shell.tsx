@@ -26,7 +26,7 @@ export function SplitShell({ photo, children, aside, className }: { photo: strin
         )}
         {aside}
       </div>
-      <div className={cn("relative flex flex-col px-6 py-6 sm:px-10 lg:px-16 lg:py-8 min-h-[calc(100vh-10rem)] lg:min-h-screen", className)}>{children}</div>
+      <div className={cn("relative flex flex-col px-6 py-5 sm:px-10 lg:px-16 lg:py-8 lg:min-h-screen", className)}>{children}</div>
     </main>
   );
 }

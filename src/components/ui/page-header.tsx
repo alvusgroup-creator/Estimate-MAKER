@@ -16,7 +16,7 @@ export function PageHeader({ icon: Icon, title, subtitle, action }: {
           {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
         </div>
       </div>
-      {action}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }

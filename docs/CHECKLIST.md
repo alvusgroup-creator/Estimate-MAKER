@@ -178,7 +178,13 @@ Nome fechado em 2026-09-16: **EasyInvoice, by Alvus Group**. Logo (ícone de fat
 | Botões "afundam" levemente ao clicar; menu e cards com transição de cor/sombra | — |
 | Quem tem "Reduzir movimento" ativado no celular não vê animação nenhuma | Ativar no iOS/Android → tudo estático |
 
-### 1.14 Regressão rápida (nada disso mudou, mas passa por código tocado)
+### 1.14 Revisão mobile (390px, conta de teste automatizada)
+
+Percorri login → onboarding → Home → Estimates → editor → Preview → Invoices → Clients → Services → Settings num Chrome emulando iPhone. Ajustes: saudação sem nome de pessoa vira "Good morning!" (empresa na linha de baixo); pill do plano não quebra; onboarding começa no topo em vez de flutuar no meio; datas do editor lado a lado ocupando a largura; linha de depósito/desconto empilha o rótulo; Preview fica acima da barra do celular; cabeçalhos das listas não espremem o botão New; travessões removidos. Nenhuma tela transborda na horizontal.
+
+Conta de teste criada no Supabase: `mobile.tour.easyinvoice@gmail.com` (pode apagar em Authentication → Users).
+
+### 1.15 Regressão rápida (nada disso mudou, mas passa por código tocado)
 
 - Criar estimate → Send → abrir link público → status vira VIEWED → e-mail de notificação chega (se `RESEND_API_KEY` setado)
 - Declinar pelo link público com motivo

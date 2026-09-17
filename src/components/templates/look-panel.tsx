@@ -33,7 +33,7 @@ export function LookPanel({ org, data, template, onTemplate, onColor }: {
   };
 
   return (
-    <div className="sticky bottom-0 z-10 bg-surface border-t border-border">
+    <div className="sticky bottom-0 z-10 bg-surface border-t border-border pb-[env(safe-area-inset-bottom)]">
       {tab === "template" ? (
         <div className="flex gap-3 overflow-x-auto px-4 py-3 snap-x">
           {TEMPLATES.map((t) => (

@@ -243,12 +243,12 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
                 <p className="text-2xl font-semibold tabular-nums tracking-tight">{numberPreview}</p>
                 {isChangeOrder && parent && <p className="text-sm text-muted mt-0.5">Change order for {parent.number}{parent.title ? ` — ${parent.title}` : ""} · original {money(parent.total)}</p>}
               </div>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex">
                 <DateInput control={control} name="issueDate" label="Date" required />
                 {isInvoice ? <DateInput control={control} name="dueDate" label="Due date" /> : !isChangeOrder && <DateInput control={control} name="expiresAt" label="Valid until" />}
               </div>
             </div>
-            <input {...register("title")} placeholder={isChangeOrder ? "What changed — e.g. Add bathroom exhaust fan" : "Job title — e.g. Exterior repaint, 123 Main St"} className="w-full text-[15px] bg-transparent border-b border-border focus:border-accent focus:outline-none py-1.5 placeholder:text-muted/60" />
+            <input {...register("title")} placeholder={isChangeOrder ? "What changed, e.g. Add bathroom exhaust fan" : "Job title, e.g. Exterior repaint at 123 Main St"} className="w-full text-[15px] bg-transparent border-b border-border focus:border-accent focus:outline-none py-1.5 placeholder:text-muted/60" />
           </CardBody>
         </Card>
 
@@ -312,7 +312,7 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
             ))}
             <CatalogSearch catalog={catalogLocal} onPick={addFromCatalog} onBlank={addBlank} />
             {lineCount === 0 && (
-              <p className="text-xs text-muted text-center">{isChangeOrder ? "Add only what changed — extra work, or a negative rate to credit removed work." : "Search your price book, or add a blank item and type it in."}</p>
+              <p className="text-xs text-muted text-center">{isChangeOrder ? "Add only what changed: extra work, or a negative rate to credit removed work." : "Search your price book, or add a blank item and type it in."}</p>
             )}
             {lineCount > 0 && <p className="text-[11px] text-muted text-center hidden sm:block">Right-click an item to duplicate, reorder or save it to your price book{isChangeOrder ? " · negative rate = credit" : ""}</p>}
           </CardBody>
@@ -437,7 +437,7 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
 
       {/* ── Full-size preview ── */}
       {preview && (
-        <div className="fixed inset-0 z-40 bg-neutral-100 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-neutral-100 overflow-y-auto">
           <div className="sticky top-0 z-10 bg-surface/95 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-3">
             <Button type="button" variant="ghost" onClick={() => setPreview(false)}><Pencil className="h-4 w-4" /> Back to edit</Button>
             <p className="flex-1 text-center text-sm font-medium truncate">{numberPreview} · {money(totals.total)}</p>
@@ -476,7 +476,7 @@ function DateInput({ control, name, label, required }: { control: Control<Estima
             value={toDateInput(field.value as Date | string | null | undefined)}
             onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : required ? new Date() : null)}
             onBlur={field.onBlur}
-            className="h-9 rounded-lg border border-border bg-surface px-2.5 text-sm focus:outline-none focus:border-accent"
+            className="h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-sm focus:outline-none focus:border-accent"
           />
         </label>
       )}
@@ -506,7 +506,7 @@ function AdjustRow({ label, active, amount, onAdd, onClear, children }: { label:
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-2.5">
       <div className="flex items-center gap-2 min-w-0 flex-wrap">
-        <span className="text-muted">{label}</span>
+        <span className="text-muted w-full sm:w-auto">{label}</span>
         {children}
         <button type="button" onClick={onClear} aria-label={`Remove ${label.toLowerCase()}`} className="text-muted hover:text-danger"><X className="h-4 w-4" /></button>
       </div>
