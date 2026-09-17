@@ -98,13 +98,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {nudges.length > 0 && (
         <div className="space-y-2">
           {nudges.map((n) => (
-            <Link key={n.href + n.title} href={n.href} className="flex items-center gap-3 rounded-xl bg-danger text-white px-4 py-3 hover:bg-danger/90">
-              <span className="h-9 w-9 rounded-full bg-white/15 grid place-items-center shrink-0"><AlertCircle className="h-4 w-4" /></span>
+            <Link key={n.href + n.title} href={n.href} className="flex items-center gap-3 rounded-xl bg-danger-soft border border-danger/25 text-danger px-4 py-3 hover:bg-danger/10">
+              <span className="h-9 w-9 rounded-full bg-danger text-white grid place-items-center shrink-0"><AlertCircle className="h-4 w-4" /></span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold">{n.title}</span>
-                <span className="block text-xs text-white/80">{n.sub}</span>
+                <span className="block text-xs text-danger/80">{n.sub}</span>
               </span>
-              <ChevronRight className="h-4 w-4 text-white/80" />
+              <ChevronRight className="h-4 w-4 text-danger/70" />
             </Link>
           ))}
         </div>
