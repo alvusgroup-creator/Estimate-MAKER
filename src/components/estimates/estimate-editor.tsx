@@ -20,6 +20,7 @@ import { createClientQuick } from "@/lib/clients/actions";
 import { PhotoUploader } from "@/components/estimates/photo-uploader";
 import { clientDisplayName, cn, daysFromNow, docWords } from "@/lib/utils";
 import type { Template } from "@/generated/prisma/enums";
+import { TEMPLATES } from "@/lib/templates";
 
 type Props = {
   org: OrgBranding & { defaultTaxRate: number; taxLabel: string; defaultTemplate: Template; defaultNotes: string | null; defaultTerms: string | null; defaultValidDays: number; defaultDepositType: "PERCENT" | "FIXED" | null; defaultDepositValue: number | null };
@@ -413,11 +414,11 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
           <Card>
             <CardHeader><CardTitle>Look</CardTitle><Link href="/settings?tab=branding" className="text-xs text-accent hover:underline">Logo & colors</Link></CardHeader>
             <CardBody>
-              <div className="grid grid-cols-3 gap-3 max-w-sm">
-                {(["CLEAN", "BOLD", "CLASSIC"] as Template[]).map((t) => (
-                  <button key={t} type="button" onClick={() => setValue("template", t)} className={cn("rounded-lg border-2 p-2 text-left text-xs", values.template === t ? "border-accent bg-accent-soft" : "border-border hover:border-muted")}>
-                    <TemplateThumb template={t} color={org.primaryColor} />
-                    <span className="block mt-2 font-medium capitalize">{t.toLowerCase()}</span>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {TEMPLATES.map((t) => (
+                  <button key={t.id} type="button" onClick={() => setValue("template", t.id)} className={cn("rounded-lg border-2 p-1.5 text-left text-xs", values.template === t.id ? "border-accent bg-accent-soft" : "border-border hover:border-muted")}>
+                    <TemplateThumb template={t.id} color={org.primaryColor} />
+                    <span className="block mt-1.5 font-medium">{t.label}</span>
                   </button>
                 ))}
               </div>
@@ -738,20 +739,31 @@ function Collapsible({ title, defaultOpen, children, className }: { title: strin
   );
 }
 
+/** Tiny schematic of each layout: header treatment, table header, balance bar. */
 function TemplateThumb({ template, color }: { template: Template; color: string }) {
+  const dark = "#1f2937";
+  const head = template === "NOIR" || template === "CLASSIC" ? dark : template === "MINIMAL" ? "transparent" : color;
+  const flatBalance = template === "MINIMAL" || template === "EXECUTIVE";
   return (
     <div className="aspect-[3/4] w-full rounded bg-white border border-border overflow-hidden p-1.5 flex flex-col gap-1">
       {template === "BOLD" ? (
-        <div className="h-3 rounded-sm" style={{ background: color }} />
+        <div className="h-3 rounded-sm" style={{ background: `linear-gradient(90deg, ${color}, ${color}99)` }} />
+      ) : template === "NOIR" ? (
+        <div className="h-3 rounded-sm" style={{ background: dark }} />
       ) : template === "CLASSIC" ? (
-        <div className="h-3 border-b-2 border-neutral-800 flex justify-center"><div className="w-1/2 h-1.5 bg-neutral-300 rounded-sm" /></div>
+        <div className="h-3 border-b-2 border-neutral-800 flex justify-between items-end"><div className="w-1/3 h-1.5 bg-neutral-400 rounded-sm" /><div className="w-1/4 h-1.5 bg-neutral-800 rounded-sm" /></div>
+      ) : template === "MINIMAL" ? (
+        <div className="h-3 flex items-center gap-1"><div className="h-2 w-2 rounded-sm bg-neutral-300" /><div className="h-1.5 w-1/3 bg-neutral-300 rounded-sm" /></div>
+      ) : template === "EXECUTIVE" ? (
+        <div className="h-3 flex justify-between"><div className="h-2 w-1/3 bg-neutral-300 rounded-sm" /><div className="h-2 w-1/4 bg-neutral-800 rounded-sm" /></div>
       ) : (
-        <div className="flex justify-between"><div className="h-2 w-2 rounded-sm" style={{ background: color }} /><div className="h-2 w-1/3 bg-neutral-200 rounded-sm" /></div>
+        <div className="flex justify-between"><div className="h-2 w-1/3 rounded-sm" style={{ background: color }} /><div className="h-2 w-2 bg-neutral-200 rounded-sm" /></div>
       )}
-      <div className="mt-1 space-y-0.5 flex-1">
+      <div className="h-1 rounded-sm mt-1" style={{ background: head, borderBottom: template === "MINIMAL" ? "1px solid #9ca3af" : undefined }} />
+      <div className="space-y-0.5 flex-1">
         {[0, 1, 2].map((i) => <div key={i} className="h-1 bg-neutral-200 rounded-sm" style={{ width: `${90 - i * 15}%` }} />)}
       </div>
-      <div className="h-1.5 w-1/3 self-end rounded-sm" style={{ background: template === "CLASSIC" ? "#333" : color }} />
+      <div className={cn("h-1.5 rounded-sm self-end", flatBalance ? "w-1/2 border-t border-neutral-800" : "w-2/3")} style={flatBalance ? undefined : { background: `linear-gradient(90deg, ${dark}, #6b7280)` }} />
     </div>
   );
 }

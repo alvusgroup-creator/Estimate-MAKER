@@ -192,7 +192,7 @@ function DocumentPreview({ name, logoUrl, email }: { name: string; logoUrl: stri
   const org: OrgBranding = {
     name, email, phone: null, website: null, licenseNo: null,
     addressLine1: null, addressLine2: null, city: null, state: null, postalCode: null,
-    logoUrl, primaryColor: "#111827", accentColor: "#2563EB", appColor: null, signatureDataUrl: null, signatureName: null,
+    logoUrl, primaryColor: "#111827", accentColor: "#2563EB", appColor: null, signatureDataUrl: null, signatureName: null, paymentInstructions: null,
     currency: "USD", locale: "en-US",
   };
   const lines = [

@@ -121,7 +121,22 @@ Mescla do nosso editor com o da referência: uma coluna só, no formato do docum
 | Preview abre em tela cheia; **Back to edit** volta; erro de validação fecha o preview e mostra no formulário | — |
 | Change order: mostra "Change order for EST-…" no topo, sem desconto/depósito/validade, e "Revised contract total" nos totais | — |
 
-### 1.9 Regressão rápida (nada disso mudou, mas passa por código tocado)
+### 1.9 Seis modelos de documento (refeitos a partir das 6 referências do InvoiceFly)
+
+| Modelo | Referência | Traço |
+|---|---|---|
+| **Clean** | 2 | Título grande à esquerda, logo à direita, cabeçalho da tabela em degradê, barra escura de Balance Due |
+| **Bold** | 3 | Faixa colorida no topo com logo, título e número; tabela na cor da marca |
+| **Classic** | 1 | Papel timbrado: logo + contato, linha grossa, nome da empresa + INVOICE, tabela escura |
+| **Noir** | 4 | Faixa preta texturizada, título centralizado com a data |
+| **Minimal** | 5 | Logo + nome lado a lado, tabela sem preenchimento, Balance Due em linha |
+| **Executive** | 6 | Logo à esquerda, título + contato à direita, tabela azul, Balance Due grande |
+
+Todos têm: **Payment instructions** (novo campo em Settings › Tax & estimate defaults, sai só em faturas), Comments/Notes, Terms, assinaturas (cliente à esquerda, contractor à direita), "Thank you for your business". Em faturas o rodapé de valores mostra Total → Paid → **Balance due**.
+
+Como testar: Settings › Branding → trocar o modelo e ver o preview (miniatura real) · editor → card **Look** com 6 miniaturas · abrir `/e/<token>` no celular (não deve transbordar).
+
+### 1.10 Regressão rápida (nada disso mudou, mas passa por código tocado)
 
 - Criar estimate → Send → abrir link público → status vira VIEWED → e-mail de notificação chega (se `RESEND_API_KEY` setado)
 - Declinar pelo link público com motivo

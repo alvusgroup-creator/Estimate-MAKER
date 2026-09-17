@@ -27,7 +27,7 @@ const brandingSchema = z.object({
   primaryColor: hex,
   accentColor: hex,
   appColor: z.union([z.literal(""), hex]).transform((v) => (v === "" ? null : v)),
-  defaultTemplate: z.enum(["CLEAN", "BOLD", "CLASSIC"]),
+  defaultTemplate: z.enum(["CLEAN", "BOLD", "CLASSIC", "NOIR", "MINIMAL", "EXECUTIVE"]),
 });
 
 const defaultsSchema = z.object({
@@ -39,6 +39,7 @@ const defaultsSchema = z.object({
   estimatePrefix: z.string().max(10),
   defaultNotes: z.string().max(5000).transform((s) => s.trim() || null),
   defaultTerms: z.string().max(5000).transform((s) => s.trim() || null),
+  paymentInstructions: z.string().max(2000).transform((s) => s.trim() || null),
 });
 
 const notificationsSchema = z.object({

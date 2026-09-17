@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const unitEnum = z.enum(["HOUR", "DAY", "SQFT", "LINEAR_FT", "EACH", "FLAT", "CUBIC_YD", "GALLON"]);
 export const discountTypeEnum = z.enum(["PERCENT", "FIXED"]);
-export const templateEnum = z.enum(["CLEAN", "BOLD", "CLASSIC"]);
+export const templateEnum = z.enum(["CLEAN", "BOLD", "CLASSIC", "NOIR", "MINIMAL", "EXECUTIVE"]);
 
 export const lineItemSchema = z.object({
   id: z.string().optional(),

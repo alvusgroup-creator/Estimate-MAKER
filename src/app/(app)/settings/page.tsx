@@ -41,6 +41,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     estimatePrefix: org.estimatePrefix,
     defaultNotes: org.defaultNotes,
     defaultTerms: org.defaultTerms,
+    paymentInstructions: org.paymentInstructions,
   };
 
   if (tab && (tab in SECTIONS || tab === "upgrade")) {
@@ -136,7 +137,7 @@ function PlanComparison({ plan }: { plan: "FREE" | "PRO" }) {
   const rows: { label: string; sub: string; free: boolean | string; pro: boolean | string }[] = [
     { label: "Estimates & invoices", sub: "Send links your customer accepts and signs from their phone", free: "Up to 3 / month", pro: "Unlimited" },
     { label: "Change orders", sub: "Signed addenda on accepted jobs, folded into the invoice", free: true, pro: true },
-    { label: "Your branding", sub: "Logo, colors and three document templates", free: true, pro: true },
+    { label: "Your branding", sub: "Logo, colors and six document templates", free: true, pro: true },
     { label: "AI estimate review", sub: "Catches missing lines, weak terms and pricing gaps", free: false, pro: true },
     { label: "Online deposits", sub: "Customer pays the deposit when they accept (coming soon)", free: false, pro: true },
     { label: "Email notifications", sub: "Know the moment a customer opens or accepts", free: true, pro: true },

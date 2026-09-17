@@ -22,6 +22,7 @@ export type OrgBranding = {
   appColor: string | null;
   signatureDataUrl: string | null;
   signatureName: string | null;
+  paymentInstructions: string | null;
   currency: string;
   locale: string;
 };
@@ -227,6 +228,6 @@ export function toEstimateDTO(e: EstimateWithRelations): EstimateDTO {
 }
 
 export function toOrgBranding(o: Prisma.OrganizationGetPayload<object>): OrgBranding {
-  const { name, email, phone, website, licenseNo, addressLine1, addressLine2, city, state, postalCode, logoUrl, primaryColor, accentColor, appColor, signatureDataUrl, signatureName, currency, locale } = o;
-  return { name, email, phone, website, licenseNo, addressLine1, addressLine2, city, state, postalCode, logoUrl, primaryColor, accentColor, appColor, signatureDataUrl, signatureName, currency, locale };
+  const { name, email, phone, website, licenseNo, addressLine1, addressLine2, city, state, postalCode, logoUrl, primaryColor, accentColor, appColor, signatureDataUrl, signatureName, paymentInstructions, currency, locale } = o;
+  return { name, email, phone, website, licenseNo, addressLine1, addressLine2, city, state, postalCode, logoUrl, primaryColor, accentColor, appColor, signatureDataUrl, signatureName, paymentInstructions, currency, locale };
 }

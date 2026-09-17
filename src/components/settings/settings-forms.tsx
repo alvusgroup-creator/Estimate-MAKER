@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScaledDocument } from "@/components/templates/scaled-document";
+import { TEMPLATES } from "@/lib/templates";
 import { removeLogo, saveBranding, saveBusiness, saveDefaults, saveNotifications, uploadLogo, type SettingsState } from "@/lib/settings/actions";
 import type { OrgBranding } from "@/lib/estimates/dto";
 import type { Template } from "@/generated/prisma/enums";
@@ -21,6 +22,7 @@ type OrgSettings = OrgBranding & {
   estimatePrefix: string;
   defaultNotes: string | null;
   defaultTerms: string | null;
+  paymentInstructions: string | null;
 };
 
 function SaveRow({ state, pending, label = "Save" }: { state: SettingsState; pending: boolean; label?: string }) {
@@ -141,11 +143,12 @@ export function BrandingForm({ org }: { org: OrgSettings }) {
                 </div>
               </Field>
               <Field label="Default template">
-                <div className="grid grid-cols-3 gap-2">
-                  {(["CLEAN", "BOLD", "CLASSIC"] as Template[]).map((t) => (
-                    <label key={t} className={cn("cursor-pointer rounded-lg border-2 p-3 text-center text-sm capitalize", template === t ? "border-accent bg-accent-soft font-medium" : "border-border")}>
-                      <input type="radio" name="defaultTemplate" value={t} checked={template === t} onChange={() => setTemplate(t)} className="sr-only" />
-                      {t.toLowerCase()}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {TEMPLATES.map((t) => (
+                    <label key={t.id} className={cn("cursor-pointer rounded-lg border-2 p-3 text-sm", template === t.id ? "border-accent bg-accent-soft" : "border-border hover:border-muted")}>
+                      <input type="radio" name="defaultTemplate" value={t.id} checked={template === t.id} onChange={() => setTemplate(t.id)} className="sr-only" />
+                      <span className="block font-medium">{t.label}</span>
+                      <span className="block text-xs text-muted">{t.description}</span>
                     </label>
                   ))}
                 </div>
@@ -203,6 +206,9 @@ export function DefaultsForm({ org }: { org: OrgSettings }) {
           </Field>
           <Field label="Default notes to customer"><Textarea name="defaultNotes" defaultValue={org.defaultNotes ?? ""} /></Field>
           <Field label="Default terms"><Textarea name="defaultTerms" defaultValue={org.defaultTerms ?? ""} className="min-h-[140px]" /></Field>
+          <Field label="Payment instructions (shown on invoices)" hint="How customers pay you: check payable to, Zelle, bank/routing, card link.">
+            <Textarea name="paymentInstructions" defaultValue={org.paymentInstructions ?? ""} placeholder={"Zelle: (555) 010-2030\nChecks payable to Rodriguez Home Services LLC"} />
+          </Field>
           <SaveRow state={state} pending={pending} />
         </form>
       </CardBody>
