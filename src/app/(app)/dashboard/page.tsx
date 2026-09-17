@@ -145,7 +145,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       {/* Big create CTA — sticky above the phone nav, inline on desktop */}
       <div className="fixed bottom-16 inset-x-0 z-30 px-4 pb-3 md:static md:px-0 md:pb-0">
-        <Link href="/estimates/new" className="flex items-center justify-center gap-2 h-13 sm:h-14 rounded-2xl text-white text-[15px] font-semibold shadow-lg shadow-accent/20 hover:opacity-95" style={{ background: "linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #60a5fa))" }}>
+        <Link href="/estimates/new" className="flex items-center justify-center gap-2 h-13 sm:h-14 rounded-2xl bg-brand text-brand-foreground text-[15px] font-semibold shadow-lg shadow-brand/30 hover:bg-brand/90">
           <Plus className="h-5 w-5" /> Create estimate
         </Link>
       </div>

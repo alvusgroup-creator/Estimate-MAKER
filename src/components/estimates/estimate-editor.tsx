@@ -544,7 +544,7 @@ function ClientBlock({ client, clients, locked, error, onPick, onCreated }: {
   if (!picking && !client) {
     return (
       <div>
-        <button type="button" onClick={() => setPicking(true)} className="flex w-full items-center justify-center gap-2 h-12 rounded-xl bg-accent text-white font-medium hover:bg-accent/90">
+        <button type="button" onClick={() => setPicking(true)} className="flex w-full items-center justify-center gap-2 h-12 rounded-xl bg-brand text-brand-foreground font-medium hover:bg-brand/90">
           <UserPlus className="h-4 w-4" /> Add client
         </button>
         {error && <p className="mt-2 text-xs text-danger">{error}</p>}

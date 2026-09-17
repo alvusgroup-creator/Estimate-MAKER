@@ -55,6 +55,7 @@ export async function createOrganization(raw: CreateOrgInput): Promise<{ ok: tru
       name: data.name,
       trade: data.trade,
       logoUrl: data.logoUrl ?? null,
+      accentColor: "#F5C518",
       email: user.email,
       defaultTerms: DEFAULT_TERMS,
       defaultDepositType: "PERCENT",

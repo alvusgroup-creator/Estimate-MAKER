@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Estimate Builder", template: "%s · Estimate Builder" },
-  description: "Professional estimates in minutes",
+  title: { default: "EasyInvoice", template: "%s · EasyInvoice" },
+  description: "Estimates and invoices contractors actually send. By Alvus Group.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

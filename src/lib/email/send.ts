@@ -4,7 +4,7 @@ import { Resend } from "resend";
  * Thin wrapper over Resend. When RESEND_API_KEY is missing every send is a no-op that
  * logs to the console, so local dev and the public link keep working without an account.
  */
-const FROM = process.env.EMAIL_FROM ?? "Estimate Builder <onboarding@resend.dev>";
+const FROM = process.env.EMAIL_FROM ?? "EasyInvoice <onboarding@resend.dev>";
 
 export function emailEnabled() {
   return !!process.env.RESEND_API_KEY;

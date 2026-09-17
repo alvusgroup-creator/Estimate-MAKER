@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { FileText, LayoutDashboard, LogOut, Plus, Receipt, Settings, UserPlus, Users, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/app/(auth)/login/actions";
+import { Logo } from "@/components/brand/logo";
 
 const items = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
@@ -36,17 +37,20 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {
     <>
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:w-64 md:flex-col md:border-r md:border-border md:bg-surface md:sticky md:top-0 md:h-screen">
-        <Link href="/dashboard" className="flex flex-col items-center justify-center gap-3 px-5 pt-7 pb-5 border-b border-border">
+        <Link href="/dashboard" className="flex items-center px-5 h-16 border-b border-border">
+          <Logo size="sm" tone="light" />
+        </Link>
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt={orgName} className="h-20 w-full max-w-[200px] object-contain" />
+            <img src={logoUrl} alt={orgName} className="h-9 w-9 rounded-lg object-contain bg-white border border-border" />
           ) : (
-            <div className="h-20 w-20 rounded-2xl grid place-items-center text-white text-3xl font-bold" style={{ background: primaryColor }}>
+            <div className="h-9 w-9 rounded-lg grid place-items-center text-white text-sm font-bold" style={{ background: primaryColor }}>
               {orgName.charAt(0)}
             </div>
           )}
-          <span className="font-semibold text-sm text-center leading-tight line-clamp-2">{orgName}</span>
-        </Link>
+          <span className="font-semibold text-sm leading-tight line-clamp-2 min-w-0">{orgName}</span>
+        </div>
         <div className="p-3">
           <Link
             href="/estimates/new"

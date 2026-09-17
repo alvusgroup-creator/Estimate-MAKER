@@ -38,7 +38,7 @@ export function LoginForm({ next, initialMode }: { next?: string; initialMode: M
     <div className="w-full max-w-md">
       <div className="mb-8">
         <h1 className="text-3xl sm:text-[34px] font-semibold tracking-tight leading-tight">
-          {isLogin ? "Welcome back" : <>Try Estimate Builder<br />for free</>}
+          {isLogin ? "Welcome back" : <>Try EasyInvoice<br />for free</>}
         </h1>
         <p className="text-muted mt-2">{isLogin ? "Sign in to your estimates, clients and invoices." : "Build and send professional estimates in minutes and get to yes faster."}</p>
       </div>
@@ -86,7 +86,7 @@ function MethodButton({ onClick, icon, label, primary }: { onClick: () => void; 
       onClick={onClick}
       className={cn(
         "flex w-full items-center gap-3 rounded-xl px-4 h-14 text-[15px] font-medium transition-colors",
-        primary ? "bg-accent text-white hover:bg-accent/90" : "bg-background hover:bg-black/5 text-foreground",
+        primary ? "bg-brand text-brand-foreground hover:bg-brand/90" : "bg-background hover:bg-black/5 text-foreground",
       )}
     >
       <span className={cn("grid place-items-center h-5 w-5", primary && "text-white")}>{icon}</span>

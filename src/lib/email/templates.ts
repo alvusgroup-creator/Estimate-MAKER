@@ -123,7 +123,7 @@ export function contractorActivityEmail(opts: {
   const html = layout({
     title: heads.title,
     bodyHtml,
-    cta: { label: "Open in Estimate Builder", url: openUrl },
+    cta: { label: "Open in EasyInvoice", url: openUrl },
     color: opts.color,
     footer: `You get this because notifications are on in Settings → Notifications.`,
   });

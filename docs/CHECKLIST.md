@@ -156,7 +156,19 @@ Como testar: editor → Preview → trocar modelo (muda na hora) → aba Color �
 
 Cortado: microfone e a bolinha de paginação.
 
-### 1.12 Regressão rápida (nada disso mudou, mas passa por código tocado)
+### 1.12 Marca: Alvus EasyInvoice
+
+Nome fechado em 2026-09-16: **EasyInvoice, by Alvus Group**. Logo (ícone de fatura com seta amarela + "Easy" e "Invoice" no selo amarelo) recriada em vetor em `src/components/brand/logo.tsx`; favicon em `src/app/icon.svg`. Tema do app virou **preto (#0b0b0b) + amarelo Alvus (#F5C518)** — botões amarelos com texto preto, links em âmbar legível.
+
+| Item | Como testar |
+|---|---|
+| Logo no login, no topo da sidebar (empresa do cliente fica logo abaixo) e no título da aba | — |
+| Favicon com o ícone | Ver a aba do navegador |
+| Botões principais amarelos (Create estimate, Email, Save no editor…) | — |
+| E-mails: remetente "EasyInvoice" e botão "Open in EasyInvoice" | Enviar um |
+| Orgs novas nascem com cor de destaque do documento amarela | Criar conta → Branding |
+
+### 1.13 Regressão rápida (nada disso mudou, mas passa por código tocado)
 
 - Criar estimate → Send → abrir link público → status vira VIEWED → e-mail de notificação chega (se `RESEND_API_KEY` setado)
 - Declinar pelo link público com motivo

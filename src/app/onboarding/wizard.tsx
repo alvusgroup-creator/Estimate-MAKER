@@ -43,7 +43,7 @@ export function OnboardingWizard({ email }: { email: string | null }) {
     return (
       <SplitShell photo={<DocumentPreview name={name} logoUrl={logoUrl} email={email} />}>
         <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <div className="h-24 w-24 rounded-full bg-accent text-white grid place-items-center mb-8"><Check className="h-12 w-12" strokeWidth={3} /></div>
+          <div className="h-24 w-24 rounded-full bg-brand text-brand-foreground grid place-items-center mb-8"><Check className="h-12 w-12" strokeWidth={3} /></div>
           <h1 className="text-3xl font-semibold tracking-tight">Account created!</h1>
           <p className="text-muted mt-2 max-w-sm">Your business is set up. Build your first estimate and send it to a customer in minutes.</p>
         </div>
@@ -117,7 +117,7 @@ export function OnboardingWizard({ email }: { email: string | null }) {
 function Progress({ value, max }: { value: number; max: number }) {
   return (
     <div className="flex-1 max-w-[200px] mx-auto h-1 rounded-full bg-border overflow-hidden" role="progressbar" aria-valuenow={value} aria-valuemax={max}>
-      <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${(value / max) * 100}%` }} />
+      <div className="h-full bg-brand rounded-full transition-all" style={{ width: `${(value / max) * 100}%` }} />
     </div>
   );
 }

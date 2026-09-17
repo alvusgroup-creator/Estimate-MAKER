@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/brand/logo";
 
 /**
  * Full-screen split used by login and onboarding: a photo on the left, the task on the right.
@@ -31,10 +32,5 @@ export function SplitShell({ photo, children, aside, className }: { photo: strin
 }
 
 export function BrandMark({ className }: { className?: string }) {
-  return (
-    <span className={cn("inline-flex items-center gap-2 font-semibold text-lg", className)}>
-      <span className="h-8 w-8 rounded-lg bg-accent text-white grid place-items-center text-sm font-bold">E</span>
-      Estimate Builder
-    </span>
-  );
+  return <Logo size="sm" tone="light" className={className} />;
 }
