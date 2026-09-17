@@ -36,29 +36,29 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:w-64 md:flex-col md:sticky md:top-0 md:h-screen bg-[#0b0b0b] text-white">
+      <aside className="hidden md:flex md:w-72 md:flex-col md:sticky md:top-0 md:h-screen bg-[#0b0b0b] text-white">
         <Link href="/dashboard" className="flex items-center px-5 h-[72px] border-b border-white/10">
           <Logo size="md" tone="dark" />
         </Link>
-        <div className="p-3">
+        <div className="p-4 pb-1">
           <Link
             href="/estimates/new"
-            className="flex items-center justify-center gap-2 h-10 rounded-lg bg-brand text-brand-foreground text-sm font-semibold hover:bg-brand/90"
+            className="flex items-center justify-center gap-2 h-12 rounded-xl bg-brand text-brand-foreground text-[15px] font-semibold hover:bg-brand/90"
           >
             <Plus className="h-4 w-4" /> New estimate
           </Link>
         </div>
-        <nav className="flex-1 px-3 space-y-0.5">
+        <nav className="flex-1 px-3 pt-2 space-y-1.5">
           {items.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 h-10 text-sm",
-                isActive(href) ? "bg-white/10 text-brand font-semibold" : "text-white/60 hover:bg-white/5 hover:text-white",
+                "flex items-center gap-4 rounded-xl px-4 h-13 text-[16px]",
+                isActive(href) ? "bg-white/10 text-brand font-semibold" : "text-white/65 hover:bg-white/5 hover:text-white",
               )}
             >
-              <Icon className="h-4 w-4" /> {label}
+              <Icon className="h-6 w-6" strokeWidth={2.25} /> {label}
             </Link>
           ))}
         </nav>
