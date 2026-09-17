@@ -77,3 +77,28 @@ input, select, textarea {
 @keyframes menu-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
 .animate-in-menu { animation: menu-in 100ms ease-out; transform-origin: top left; }
 @media (prefers-reduced-motion: reduce) { .animate-in, .animate-in-menu { animation: none; } }
+
+/* ── Motion: page entrance, brand loader, skeleton shimmer ── */
+@keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.animate-page-in { animation: page-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* The logo arrow lifts off the sheet and loops back: "sending" */
+@keyframes arrow-fly {
+  0%   { transform: translate(0, 0); opacity: 1; }
+  55%  { transform: translate(22px, -22px); opacity: 0; }
+  56%  { transform: translate(-14px, 14px); opacity: 0; }
+  100% { transform: translate(0, 0); opacity: 1; }
+}
+.loader-arrow { animation: arrow-fly 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite; transform-origin: center; }
+
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.skeleton {
+  background: linear-gradient(90deg, rgba(0,0,0,0.05) 25%, rgba(0,0,0,0.10) 50%, rgba(0,0,0,0.05) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-in, .loader-arrow, .skeleton { animation: none; }
+}

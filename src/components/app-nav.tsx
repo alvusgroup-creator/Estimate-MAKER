@@ -54,7 +54,7 @@ export function AppNav({ orgName, logoUrl, primaryColor, userEmail }: {
               key={href}
               href={href}
               className={cn(
-                "flex items-center gap-4 rounded-xl px-4 h-13 text-[16px]",
+                "flex items-center gap-4 rounded-xl px-4 h-13 text-[16px] transition-colors duration-150",
                 isActive(href) ? "bg-white/10 text-brand font-semibold" : "text-white/65 hover:bg-white/5 hover:text-white",
               )}
             >

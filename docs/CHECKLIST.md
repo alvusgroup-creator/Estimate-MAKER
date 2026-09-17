@@ -168,7 +168,17 @@ Nome fechado em 2026-09-16: **EasyInvoice, by Alvus Group**. Logo (ícone de fat
 | E-mails: remetente "EasyInvoice" e botão "Open in EasyInvoice" | Enviar um |
 | Orgs novas nascem com cor de destaque do documento amarela | Criar conta → Branding |
 
-### 1.13 Regressão rápida (nada disso mudou, mas passa por código tocado)
+### 1.13 Telas de carregamento e transições
+
+| Item | Como testar |
+|---|---|
+| **Loader da marca**: a folha fica e a seta amarela "decola" em loop | Abrir um estimate com a rede lenta (DevTools → Network → Slow 3G) |
+| Esqueletos no formato de cada tela: Home (stats + lista), listas (cabeçalho do mês + chips + linhas), documento (papel + painel), editor e link público (loader centralizado) | Navegar entre as telas com rede lenta |
+| Cada página entra com um fade + leve subida (220 ms) | Trocar de item no menu |
+| Botões "afundam" levemente ao clicar; menu e cards com transição de cor/sombra | — |
+| Quem tem "Reduzir movimento" ativado no celular não vê animação nenhuma | Ativar no iOS/Android → tudo estático |
+
+### 1.14 Regressão rápida (nada disso mudou, mas passa por código tocado)
 
 - Criar estimate → Send → abrir link público → status vira VIEWED → e-mail de notificação chega (se `RESEND_API_KEY` setado)
 - Declinar pelo link público com motivo
