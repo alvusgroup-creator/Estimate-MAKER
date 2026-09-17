@@ -42,9 +42,11 @@ export type DocumentData = {
   signerName?: string | null;
   signatureDataUrl?: string | null; // drawn on the public link; falls back to the typed name
   // Invoice mode
-  kind?: "ESTIMATE" | "INVOICE";
+  kind?: "ESTIMATE" | "INVOICE" | "CHANGE_ORDER";
   dueDate?: string | Date | null;
   paidAt?: string | Date | null;
+  // Change-order mode: the accepted estimate this amends, so the document can show the revised contract total
+  changeOrder?: { parentNumber: string; parentTitle?: string | null; originalTotal: number; priorChangesTotal: number } | null;
   // Job photos shown on the document
   photos?: { url: string; caption?: string | null }[];
 };
@@ -60,6 +62,7 @@ type Ctx = {
   showJob: boolean;
   pct: string;
   isInvoice: boolean;
+  isChangeOrder: boolean;
   heading: string;
 };
 
@@ -83,7 +86,8 @@ export function EstimateDocument({ template, org, data, className }: {
     showJob: jobAddr.length > 0 && jobAddr.join() !== clientAddr.join(),
     pct: (data.taxRate * 100).toFixed(2).replace(/.?0+$/, ""),
     isInvoice: data.kind === "INVOICE",
-    heading: data.kind === "INVOICE" ? "Invoice" : "Estimate",
+    isChangeOrder: data.kind === "CHANGE_ORDER",
+    heading: data.kind === "INVOICE" ? "Invoice" : data.kind === "CHANGE_ORDER" ? "Change Order" : "Estimate",
   };
 
   const Layout = template === "BOLD" ? BoldLayout : template === "CLASSIC" ? ClassicLayout : CleanLayout;
@@ -130,12 +134,14 @@ function Party({ label, name, lines, contact }: { label: string; name?: string; 
 
 function MetaRows({ data, date, dense }: { data: DocumentData; date: Ctx["date"]; dense?: boolean }) {
   const inv = data.kind === "INVOICE";
+  const co = data.kind === "CHANGE_ORDER";
   const rows: [string, string][] = [
-    [inv ? "Invoice #" : "Estimate #", data.number],
+    [inv ? "Invoice #" : co ? "Change order #" : "Estimate #", data.number],
     ["Date", date(data.issueDate)],
   ];
+  if (co && data.changeOrder) rows.push(["Amends estimate", data.changeOrder.parentNumber]);
   if (inv && data.dueDate) rows.push(["Due date", date(data.dueDate)]);
-  if (!inv && data.expiresAt) rows.push(["Valid until", date(data.expiresAt)]);
+  if (!inv && !co && data.expiresAt) rows.push(["Valid until", date(data.expiresAt)]);
   if (inv && data.paidAt) rows.push(["Paid", date(data.paidAt)]);
   return (
     <dl className={`grid grid-cols-[auto_1fr] gap-x-6 ${dense ? "gap-y-0.5" : "gap-y-1.5"} text-[12.5px] whitespace-nowrap`}>
@@ -197,6 +203,8 @@ function Lines({ ctx, variant }: { ctx: Ctx; variant: "clean" | "bold" | "classi
 function Totals({ ctx, variant }: { ctx: Ctx; variant: "clean" | "bold" | "classic" }) {
   const { data, money, pct } = ctx;
   const row = "flex justify-between items-baseline py-1 text-neutral-700";
+  const totalLabel = ctx.isChangeOrder ? (data.total < 0 ? "Credit" : "Change total") : "Total";
+  const co = ctx.isChangeOrder ? data.changeOrder : null;
   return (
     <div className="w-full max-w-[300px] ml-auto">
       <div className={row}><span>Subtotal</span><span className="tabular-nums">{money(data.subtotal)}</span></div>
@@ -205,22 +213,30 @@ function Totals({ ctx, variant }: { ctx: Ctx; variant: "clean" | "bold" | "class
 
       {variant === "classic" ? (
         <div className="mt-2 flex justify-between items-center border-2 border-neutral-800 px-3 py-2">
-          <span className="text-[15px] font-bold uppercase tracking-wide">Total</span>
+          <span className="text-[15px] font-bold uppercase tracking-wide">{totalLabel}</span>
           <span className="text-[18px] font-bold tabular-nums">{money(data.total)}</span>
         </div>
       ) : variant === "bold" ? (
         <div className="mt-2 flex justify-between items-center px-3 py-2.5 text-white rounded-md" style={{ background: "var(--doc-primary)" }}>
-          <span className="text-[13px] font-bold uppercase tracking-wide">Total</span>
+          <span className="text-[13px] font-bold uppercase tracking-wide">{totalLabel}</span>
           <span className="text-[18px] font-bold tabular-nums">{money(data.total)}</span>
         </div>
       ) : (
         <div className="mt-2 pt-2.5 border-t-2 flex justify-between items-baseline" style={{ borderColor: "var(--doc-primary)" }}>
-          <span className="text-[14px] font-semibold">Total</span>
+          <span className="text-[14px] font-semibold">{totalLabel}</span>
           <span className="text-[20px] font-bold tabular-nums" style={{ color: "var(--doc-primary)" }}>{money(data.total)}</span>
         </div>
       )}
 
-      {data.depositAmount > 0 && !ctx.isInvoice && (
+      {co && (
+        <div className="mt-3 pt-2 border-t border-neutral-300 text-[12px]">
+          <div className={row}><span>Original estimate {co.parentNumber}</span><span className="tabular-nums">{money(co.originalTotal)}</span></div>
+          {co.priorChangesTotal !== 0 && <div className={row}><span>Previously approved changes</span><span className="tabular-nums">{money(co.priorChangesTotal)}</span></div>}
+          <div className={row}><span>This change order</span><span className="tabular-nums">{money(data.total)}</span></div>
+          <div className="flex justify-between items-baseline pt-1 text-[13.5px] font-semibold text-neutral-900"><span>Revised contract total</span><span className="tabular-nums">{money(co.originalTotal + co.priorChangesTotal + data.total)}</span></div>
+        </div>
+      )}
+      {data.depositAmount > 0 && !ctx.isInvoice && !ctx.isChangeOrder && (
         <div className={`${row} text-[12.5px] mt-1`}>
           <span>Deposit due on acceptance</span>
           <span className="tabular-nums font-semibold text-neutral-900">{money(data.depositAmount)}</span>
@@ -301,7 +317,7 @@ function Signatures({ ctx, variant }: { ctx: Ctx; variant: "clean" | "bold" | "c
           ) : null}
         </div>
         <div className="flex justify-between mt-1.5 text-[11px] text-neutral-600">
-          <span>{data.acceptedAt ? `${data.signerName ?? "Client"} · Accepted ${date(data.acceptedAt)}` : "Customer signature"}</span>
+          <span>{data.acceptedAt ? `${data.signerName ?? "Client"} · ${ctx.isChangeOrder ? "Approved" : "Accepted"} ${date(data.acceptedAt)}` : ctx.isChangeOrder ? "Customer approval" : "Customer signature"}</span>
           <span>{data.acceptedAt ? "Client" : "Date"}</span>
         </div>
       </div>

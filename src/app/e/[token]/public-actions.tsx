@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { respondToEstimate } from "./actions";
 import { SignatureCanvas, clearSignature } from "@/components/ui/signature-canvas";
-import type { EstimateStatus } from "@/generated/prisma/enums";
+import type { DocumentKind, EstimateStatus } from "@/generated/prisma/enums";
+import { docWords } from "@/lib/utils";
 
 export function PublicActions({ token, status, kind, canRespond, orgName, orgPhone, orgEmail }: {
   token: string;
   status: EstimateStatus;
-  kind: "ESTIMATE" | "INVOICE";
+  kind: DocumentKind;
   canRespond: boolean;
   orgName: string;
   orgPhone: string | null;
@@ -24,6 +25,7 @@ export function PublicActions({ token, status, kind, canRespond, orgName, orgPho
   const [reason, setReason] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [drawn, setDrawn] = useState(false);
+  const { word, Word } = docWords(kind);
 
   const submit = (decision: "ACCEPTED" | "DECLINED") =>
     start(async () => {
@@ -43,19 +45,19 @@ export function PublicActions({ token, status, kind, canRespond, orgName, orgPho
       ) : status === "ACCEPTED" || mode === "done" ? (
         <div className="rounded-xl bg-white p-5 text-center border border-neutral-200">
           <div className="mx-auto h-10 w-10 rounded-full bg-green-100 text-green-700 grid place-items-center mb-2"><Check className="h-5 w-5" /></div>
-          <p className="font-medium">{status === "DECLINED" || (mode === "done" && !name) ? "Response recorded" : "Estimate accepted"}</p>
+          <p className="font-medium">{status === "DECLINED" || (mode === "done" && !name) ? "Response recorded" : `${Word} accepted`}</p>
           <p className="text-sm text-neutral-600 mt-1">{orgName} has been notified{orgPhone ? ` · ${orgPhone}` : ""}.</p>
         </div>
       ) : status === "DECLINED" ? (
-        <div className="rounded-xl bg-white p-5 text-center border border-neutral-200 text-sm text-neutral-600">This estimate was declined. Contact {orgName}{orgPhone ? ` at ${orgPhone}` : ""} to revisit it.</div>
+        <div className="rounded-xl bg-white p-5 text-center border border-neutral-200 text-sm text-neutral-600">This {word} was declined. Contact {orgName}{orgPhone ? ` at ${orgPhone}` : ""} to revisit it.</div>
       ) : canRespond && mode === "idle" ? (
         <div className="grid grid-cols-2 gap-3">
-          <Button size="lg" className="bg-green-700 hover:bg-green-800" onClick={() => setMode("accept")}>Accept estimate</Button>
+          <Button size="lg" className="bg-green-700 hover:bg-green-800" onClick={() => setMode("accept")}>Accept {word}</Button>
           <Button size="lg" variant="secondary" onClick={() => setMode("decline")}>Decline</Button>
         </div>
       ) : mode === "accept" ? (
         <div className="rounded-xl bg-white p-5 border border-neutral-200 space-y-3">
-          <p className="font-medium">Accept this estimate</p>
+          <p className="font-medium">Accept this {word}</p>
           <p className="text-sm text-neutral-600">Type your full name to confirm. This lets {orgName} schedule the work.</p>
           <Input placeholder="Your full name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
           <div className="space-y-1.5">
@@ -75,7 +77,7 @@ export function PublicActions({ token, status, kind, canRespond, orgName, orgPho
         </div>
       ) : mode === "decline" ? (
         <div className="rounded-xl bg-white p-5 border border-neutral-200 space-y-3">
-          <p className="font-medium">Decline this estimate</p>
+          <p className="font-medium">Decline this {word}</p>
           <Textarea placeholder="Optional — let them know why (price, timing, went another way…)" value={reason} onChange={(e) => setReason(e.target.value)} />
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">

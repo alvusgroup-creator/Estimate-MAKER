@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { BadgeDollarSign, Check, Copy, CopyPlus, ExternalLink, FileText, Printer, Receipt, Send, ThumbsDown, ThumbsUp, Trash2, Undo2 } from "lucide-react";
+import { BadgeDollarSign, Check, Copy, CopyPlus, ExternalLink, FilePlus2, FileText, Printer, Receipt, Send, ThumbsDown, ThumbsUp, Trash2, Undo2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { convertToInvoice, deleteEstimate, duplicateEstimate, markInvoicePaid, setEstimateStatus } from "@/lib/estimates/actions";
 import type { EstimateDTO } from "@/lib/estimates/dto";
 import { EmailDialog } from "./email-dialog";
+import { docWords } from "@/lib/utils";
 
 export function EstimateActions({ estimate, publicUrl, emailEnabled }: { estimate: EstimateDTO; publicUrl: string; emailEnabled: boolean }) {
   const [pending, start] = useTransition();
@@ -15,7 +16,8 @@ export function EstimateActions({ estimate, publicUrl, emailEnabled }: { estimat
   const [emailOpen, setEmailOpen] = useState(false);
   const s = estimate.status;
   const inv = estimate.kind === "INVOICE";
-  const docWord = inv ? "invoice" : "estimate";
+  const isEstimate = estimate.kind === "ESTIMATE";
+  const { word: docWord, Word } = docWords(estimate.kind);
 
   const copy = async () => {
     await navigator.clipboard.writeText(publicUrl);
@@ -25,7 +27,7 @@ export function EstimateActions({ estimate, publicUrl, emailEnabled }: { estimat
   };
 
   const smsHref = `sms:${estimate.client.phone ?? ""}?&body=${encodeURIComponent(`Hi ${estimate.client.firstName}, here's your ${docWord} ${estimate.number}: ${publicUrl}`)}`;
-  const mailHref = `mailto:${estimate.client.email ?? ""}?subject=${encodeURIComponent(`${inv ? "Invoice" : "Estimate"} ${estimate.number}`)}&body=${encodeURIComponent(`Hi ${estimate.client.firstName},\n\nHere's your ${docWord}: ${publicUrl}\n\nLet me know if you have any questions.`)}`;
+  const mailHref = `mailto:${estimate.client.email ?? ""}?subject=${encodeURIComponent(`${Word} ${estimate.number}`)}&body=${encodeURIComponent(`Hi ${estimate.client.firstName},\n\nHere's your ${docWord}: ${publicUrl}\n\nLet me know if you have any questions.`)}`;
 
   return (
     <Card>
@@ -65,7 +67,10 @@ export function EstimateActions({ estimate, publicUrl, emailEnabled }: { estimat
           {inv && s === "PAID" && (
             <Button variant="secondary" className="w-full" disabled={pending} onClick={() => start(() => markInvoicePaid(estimate.id, false))}><Undo2 className="h-4 w-4" /> Mark as unpaid</Button>
           )}
-          {!inv && s === "ACCEPTED" && (
+          {isEstimate && s === "ACCEPTED" && (
+            <Link href={`/estimates/${estimate.id}/change-order`} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm font-medium hover:bg-background"><FilePlus2 className="h-4 w-4" /> New change order</Link>
+          )}
+          {isEstimate && s === "ACCEPTED" && (
             estimate.invoiceId ? (
               <Link href={`/estimates/${estimate.invoiceId}`} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"><Receipt className="h-4 w-4" /> Open invoice</Link>
             ) : (
@@ -74,6 +79,9 @@ export function EstimateActions({ estimate, publicUrl, emailEnabled }: { estimat
           )}
           {inv && estimate.sourceEstimateId && (
             <Link href={`/estimates/${estimate.sourceEstimateId}`} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium text-muted hover:bg-black/5"><FileText className="h-4 w-4" /> View source estimate</Link>
+          )}
+          {estimate.parent && (
+            <Link href={`/estimates/${estimate.parent.id}`} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium text-muted hover:bg-black/5"><FileText className="h-4 w-4" /> View estimate {estimate.parent.number}</Link>
           )}
           {!inv && (s === "SENT" || s === "VIEWED") && (
             <div className="grid grid-cols-2 gap-2">

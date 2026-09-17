@@ -40,7 +40,7 @@ export async function respondToEstimate(
     signatureDataUrl = sig.data;
   }
 
-  if (e.kind !== "ESTIMATE") return { ok: false, error: "Invoices cannot be accepted here." };
+  if (e.kind === "INVOICE") return { ok: false, error: "Invoices cannot be accepted here." };
 
   await prisma.estimate.update({
     where: { id: e.id },

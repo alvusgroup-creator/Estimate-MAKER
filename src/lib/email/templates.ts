@@ -3,6 +3,7 @@
  * Outlook and Apple Mail. Every template also returns a text version.
  */
 import { formatMoney } from "@/lib/estimates/calc";
+import { docWords } from "@/lib/utils";
 
 const ESC: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 function esc(s: string) {
@@ -26,7 +27,7 @@ const p = (s: string) => `<p style="margin:0 0 12px;font-size:15px;line-height:1
 
 export type DocSummary = {
   number: string;
-  kind: "ESTIMATE" | "INVOICE";
+  kind: "ESTIMATE" | "INVOICE" | "CHANGE_ORDER";
   title: string | null;
   total: number;
   currency: string;
@@ -41,8 +42,7 @@ export type OrgSummary = { name: string; phone: string | null; email: string | n
 /** Customer-facing: "here's your estimate" with the public link. */
 export function customerDocumentEmail(opts: { doc: DocSummary; org: OrgSummary; firstName: string; message: string | null }) {
   const { doc, org } = opts;
-  const word = doc.kind === "INVOICE" ? "invoice" : "estimate";
-  const Word = doc.kind === "INVOICE" ? "Invoice" : "Estimate";
+  const { word, Word } = docWords(doc.kind);
   const money = formatMoney(doc.total, doc.currency, doc.locale);
   const when = doc.kind === "INVOICE"
     ? doc.dueDate ? `Due ${doc.dueDate.toLocaleDateString(doc.locale, { dateStyle: "medium" })}` : null
@@ -52,7 +52,7 @@ export function customerDocumentEmail(opts: { doc: DocSummary; org: OrgSummary; 
   const custom = opts.message?.trim() || null;
   const intro = custom
     ? custom.split(/\n{2,}/).map((para) => p(esc(para).replace(/\n/g, "<br>"))).join("")
-    : p(`Here's your ${word} from ${esc(org.name)}. Open the link below to review it${doc.kind === "ESTIMATE" ? " and accept online" : ""}.`);
+    : p(`Here's your ${word} from ${esc(org.name)}. Open the link below to review it${doc.kind !== "INVOICE" ? " and accept online" : ""}.`);
   const bodyHtml =
     p(`Hi ${esc(opts.firstName)},`) + intro +
     `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:16px 0;background:#f9fafb;border-radius:8px;width:100%"><tr><td style="padding:14px 16px">
@@ -95,25 +95,25 @@ export function contractorActivityEmail(opts: {
   color: string;
 }) {
   const { doc } = opts;
-  const word = doc.kind === "INVOICE" ? "Invoice" : "Estimate";
+  const { word: lower } = docWords(doc.kind);
   const money = formatMoney(doc.total, doc.currency, doc.locale);
   const label = doc.title ? `${doc.number} — ${doc.title}` : doc.number;
   const openUrl = `${opts.appUrl}/estimates/${opts.estimateId}`;
 
   const heads = {
     VIEWED: {
-      subject: `👀 ${opts.clientName} viewed ${word.toLowerCase()} ${doc.number}`,
-      title: `${opts.clientName} just opened your ${word.toLowerCase()}`,
+      subject: `👀 ${opts.clientName} viewed ${lower} ${doc.number}`,
+      title: `${opts.clientName} just opened your ${lower}`,
       body: `They're looking at it now. A quick follow-up call or text often closes the job.`,
     },
     ACCEPTED: {
       subject: `✅ ${opts.clientName} accepted ${doc.number} (${money})`,
-      title: `${opts.clientName} accepted your estimate`,
-      body: `Signed by ${opts.signerName ?? opts.clientName}. Next step: schedule the job, then convert it to an invoice from the app.`,
+      title: `${opts.clientName} accepted your ${lower}`,
+      body: doc.kind === "CHANGE_ORDER" ? `Signed by ${opts.signerName ?? opts.clientName}. The extra work is approved — it will be included when you invoice the job.` : `Signed by ${opts.signerName ?? opts.clientName}. Next step: schedule the job, then convert it to an invoice from the app.`,
     },
     DECLINED: {
       subject: `❌ ${opts.clientName} declined ${doc.number}`,
-      title: `${opts.clientName} declined your estimate`,
+      title: `${opts.clientName} declined your ${lower}`,
       body: opts.reason ? `Their reason: “${opts.reason}”` : `No reason given. You can reopen and revise it from the app.`,
     },
   }[opts.kind];

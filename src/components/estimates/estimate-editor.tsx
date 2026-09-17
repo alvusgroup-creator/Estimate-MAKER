@@ -12,9 +12,9 @@ import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { EstimateDocument } from "@/components/templates/estimate-document";
 import { computeTotals, formatMoney } from "@/lib/estimates/calc";
-import { estimateFormSchema, UNIT_LABELS, type EstimateFormInput, type EstimateFormValues } from "@/lib/estimates/schemas";
-import type { ClientDTO, EstimateDTO, OrgBranding, ServiceItemDTO } from "@/lib/estimates/dto";
-import { createEstimate, updateEstimate } from "@/lib/estimates/actions";
+import { changeOrderFormSchema, estimateFormSchema, UNIT_LABELS, type EstimateFormInput, type EstimateFormValues } from "@/lib/estimates/schemas";
+import type { ClientDTO, EstimateDTO, OrgBranding, ParentEstimateDTO, ServiceItemDTO } from "@/lib/estimates/dto";
+import { createChangeOrder, createEstimate, updateEstimate } from "@/lib/estimates/actions";
 import { createClientQuick } from "@/lib/clients/actions";
 import { PhotoUploader } from "@/components/estimates/photo-uploader";
 import { clientDisplayName, cn, daysFromNow } from "@/lib/utils";
@@ -25,13 +25,14 @@ type Props = {
   clients: ClientDTO[];
   catalog: ServiceItemDTO[];
   estimate?: EstimateDTO; // undefined → create
+  changeOrderOf?: EstimateDTO; // create a change order on this accepted estimate (client, address, tax inherited)
   nextNumberPreview: string;
   preselectClientId?: string;
 };
 
 const toDateInput = (d: string | Date) => new Date(d).toISOString().slice(0, 10);
 
-export function EstimateEditor({ org, clients: initialClients, catalog, estimate, nextNumberPreview, preselectClientId }: Props) {
+export function EstimateEditor({ org, clients: initialClients, catalog, estimate, changeOrderOf, nextNumberPreview, preselectClientId }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -40,6 +41,13 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
   const [catalogLocal, setCatalogLocal] = useState(catalog);
   const [toast, setToast] = useState<string | null>(null);
   const notify = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 1800); };
+
+  // Change-order mode: new CO on an accepted estimate, or editing an existing CO
+  const isChangeOrder = !!changeOrderOf || estimate?.kind === "CHANGE_ORDER";
+  const parent: ParentEstimateDTO | null = changeOrderOf
+    ? { id: changeOrderOf.id, number: changeOrderOf.number, title: changeOrderOf.title, total: changeOrderOf.total, priorChangesTotal: changeOrderOf.changeOrders.filter((c) => c.status === "ACCEPTED").reduce((sum, c) => sum + c.total, 0) }
+    : estimate?.parent ?? null;
+  const numberPreview = estimate?.number ?? (changeOrderOf ? `${changeOrderOf.number}-CO${changeOrderOf.changeOrders.length + 1}` : nextNumberPreview);
 
   const defaults: EstimateFormInput = estimate
     ? {
@@ -66,7 +74,28 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
         lineItems: estimate.lineItems.map((l) => ({ ...l, description: l.description ?? null })),
         photos: estimate.photos.map((p) => ({ url: p.url, caption: p.caption, showOnDocument: p.showOnDocument })),
       }
-    : {
+    : changeOrderOf
+      ? {
+          clientId: changeOrderOf.clientId,
+          title: null,
+          template: changeOrderOf.template,
+          issueDate: new Date(),
+          expiresAt: null,
+          jobAddressLine1: changeOrderOf.jobAddressLine1, jobAddressLine2: changeOrderOf.jobAddressLine2, jobCity: changeOrderOf.jobCity, jobState: changeOrderOf.jobState, jobPostalCode: changeOrderOf.jobPostalCode,
+          notes: null,
+          terms: changeOrderOf.terms,
+          internalNotes: null,
+          discountType: null,
+          discountValue: null,
+          taxRate: changeOrderOf.taxRate,
+          taxLabel: changeOrderOf.taxLabel,
+          depositType: null,
+          depositValue: null,
+          dueDate: null,
+          lineItems: [],
+          photos: [],
+        }
+      : {
         clientId: preselectClientId ?? "",
         title: null,
         template: org.defaultTemplate,
@@ -87,7 +116,7 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
         photos: [],
       };
 
-  const form = useForm<EstimateFormInput, unknown, EstimateFormValues>({ resolver: zodResolver(estimateFormSchema), defaultValues: defaults, mode: "onBlur" });
+  const form = useForm<EstimateFormInput, unknown, EstimateFormValues>({ resolver: zodResolver(isChangeOrder ? changeOrderFormSchema : estimateFormSchema), defaultValues: defaults, mode: "onBlur" });
   const { control, register, handleSubmit, setValue, formState: { errors } } = form;
   const lines = useFieldArray({ control, name: "lineItems" });
   const values = useWatch({ control });
@@ -133,14 +162,14 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
   const submit = handleSubmit((data) => {
     setServerError(null);
     start(async () => {
-      const res = estimate ? await updateEstimate(estimate.id, data) : await createEstimate(data);
+      const res = estimate ? await updateEstimate(estimate.id, data) : changeOrderOf ? await createChangeOrder(changeOrderOf.id, data) : await createEstimate(data);
       if (!res.ok) return setServerError(res.error);
       router.push(`/estimates/${res.id}`);
     });
   });
 
   const previewData = {
-    number: estimate?.number ?? nextNumberPreview,
+    number: numberPreview,
     title: values.title,
     issueDate: (values.issueDate as Date | undefined) ?? new Date(),
     expiresAt: (values.expiresAt as Date | null | undefined) ?? null,
@@ -164,8 +193,9 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
     depositAmount: totals.depositAmount,
     notes: values.notes,
     terms: values.terms,
-    kind: (estimate?.kind ?? "ESTIMATE") as "ESTIMATE" | "INVOICE",
+    kind: isChangeOrder ? ("CHANGE_ORDER" as const) : ((estimate?.kind ?? "ESTIMATE") as "ESTIMATE" | "INVOICE"),
     dueDate: (values.dueDate as Date | null | undefined) ?? null,
+    changeOrder: parent ? { parentNumber: parent.number, parentTitle: parent.title, originalTotal: parent.total, priorChangesTotal: parent.priorChangesTotal } : null,
     photos: photos.filter((p) => p.showOnDocument).map((p) => ({ url: p.url, caption: p.caption })),
   };
 
@@ -175,11 +205,18 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
       <div className={cn("space-y-4", mobileView === "preview" && "hidden lg:block")}>
         <Card>
           <CardBody className="space-y-4">
-            <Field label="Client" error={errors.clientId?.message}>
-              <ClientPicker clients={clients} value={values.clientId ?? ""} onChange={onClientPicked} onCreated={(c) => { setClients((p) => [c, ...p]); onClientPicked(c.id); }} />
-            </Field>
+            {isChangeOrder && parent ? (
+              <div className="rounded-lg bg-accent-soft text-sm px-3 py-2">
+                <p className="font-medium">Change order for {parent.number}{parent.title ? ` — ${parent.title}` : ""}</p>
+                <p className="text-xs text-muted mt-0.5">{selectedClient ? clientDisplayName(selectedClient) : ""} · original total {money(parent.total)}. The customer approves this separately.</p>
+              </div>
+            ) : (
+              <Field label="Client" error={errors.clientId?.message}>
+                <ClientPicker clients={clients} value={values.clientId ?? ""} onChange={onClientPicked} onCreated={(c) => { setClients((p) => [c, ...p]); onClientPicked(c.id); }} />
+              </Field>
+            )}
             <Field label="Title (optional)">
-              <Input {...register("title")} placeholder="Exterior repaint — 123 Main St" />
+              <Input {...register("title")} placeholder={isChangeOrder ? "Add bathroom exhaust fan" : "Exterior repaint — 123 Main St"} />
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Date">
@@ -189,7 +226,7 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
                 <Field label="Due date">
                   <Input type="date" {...register("dueDate", { setValueAs: (v) => (v ? new Date(v) : null) })} defaultValue={defaults.dueDate ? toDateInput(defaults.dueDate as Date) : ""} />
                 </Field>
-              ) : (
+              ) : isChangeOrder ? null : (
                 <Field label="Valid until">
                   <Input type="date" {...register("expiresAt", { setValueAs: (v) => (v ? new Date(v) : null) })} defaultValue={defaults.expiresAt ? toDateInput(defaults.expiresAt as Date) : ""} />
                 </Field>
@@ -237,10 +274,12 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
                   lineTotal={totals.lineTotals[i] ?? 0}
                   money={money}
                   error={errors.lineItems?.[i]}
+                  allowNegative={isChangeOrder}
                 />
               ))}
             </div>
-            {lines.fields.length === 0 && <p className="text-sm text-muted text-center py-6">Search your services above or add a blank line.</p>}
+            {lines.fields.length === 0 && <p className="text-sm text-muted text-center py-6">{isChangeOrder ? "Add only what changed — extra work, or a negative rate to credit removed work." : "Search your services above or add a blank line."}</p>}
+            {isChangeOrder && lines.fields.length > 0 && <p className="text-[11px] text-muted text-center">Use a negative rate to credit the customer for removed scope.</p>}
             {lines.fields.length > 0 && <p className="text-[11px] text-muted text-center hidden sm:block">Right-click a line to duplicate, reorder or save it to your catalog · ⌘D duplicates</p>}
           </CardBody>
         </Card>
@@ -258,8 +297,8 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
         <Card>
           <CardHeader><CardTitle>Pricing</CardTitle></CardHeader>
           <CardBody className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Discount">
+            <div className={cn("grid gap-3", isChangeOrder ? "grid-cols-1" : "grid-cols-2")}>
+              {!isChangeOrder && <Field label="Discount">
                 <div className="flex gap-2">
                   <Select className="w-24" {...register("discountType", { setValueAs: (v) => (v === "" ? null : v) })}>
                     <option value="">None</option>
@@ -268,12 +307,12 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
                   </Select>
                   <Input type="number" inputMode="decimal" step="0.01" min="0" {...register("discountValue", { setValueAs: (v) => (v === "" ? null : Number(v)) })} disabled={!values.discountType} />
                 </div>
-              </Field>
+              </Field>}
               <Field label={`${values.taxLabel ?? "Tax"} rate (%)`}>
                 <Input type="number" inputMode="decimal" step="0.01" min="0" max="100" {...register("taxRate", { setValueAs: (v) => (v === "" ? 0 : Number(v) / 100) })} defaultValue={(Number(defaults.taxRate) * 100).toString()} />
               </Field>
             </div>
-            <Field label={isInvoice ? "Deposit already paid" : "Deposit due on acceptance"}>
+            {!isChangeOrder && <Field label={isInvoice ? "Deposit already paid" : "Deposit due on acceptance"}>
               <div className="flex gap-2">
                 <Select className="w-24" {...register("depositType", { setValueAs: (v) => (v === "" ? null : v) })}>
                   <option value="">None</option>
@@ -282,7 +321,7 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
                 </Select>
                 <Input type="number" inputMode="decimal" step="0.01" min="0" {...register("depositValue", { setValueAs: (v) => (v === "" ? null : Number(v)) })} disabled={!values.depositType} />
               </div>
-            </Field>
+            </Field>}
           </CardBody>
         </Card>
 
@@ -301,7 +340,7 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
           </CardBody>
         </Card>
 
-        <Card>
+        {!isChangeOrder && <Card>
           <CardHeader><CardTitle>Template</CardTitle></CardHeader>
           <CardBody>
             <div className="grid grid-cols-3 gap-3">
@@ -318,7 +357,7 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
               ))}
             </div>
           </CardBody>
-        </Card>
+        </Card>}
       </div>
 
       {/* ── Preview column ── */}
@@ -338,7 +377,7 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
           <Button type="button" variant="secondary" className="lg:hidden" onClick={() => setMobileView((v) => (v === "edit" ? "preview" : "edit"))}>
             {mobileView === "edit" ? <><Eye className="h-4 w-4" /> Preview</> : <><Pencil className="h-4 w-4" /> Edit</>}
           </Button>
-          <Button type="submit" disabled={pending}>{pending ? "Saving…" : estimate ? "Save changes" : "Save estimate"}</Button>
+          <Button type="submit" disabled={pending}>{pending ? "Saving…" : estimate ? "Save changes" : isChangeOrder ? "Save change order" : "Save estimate"}</Button>
         </div>
         {serverError && <p className="px-4 pb-2 text-xs text-danger">{serverError}</p>}
       </div>
@@ -350,7 +389,7 @@ export function EstimateEditor({ org, clients: initialClients, catalog, estimate
 
 /* ───────────────────────── pieces ───────────────────────── */
 
-function LineRow({ index, count, control, register, onRemove, onDuplicate, onMove, onSaveToCatalog, lineTotal, money, error }: {
+function LineRow({ index, count, control, register, onRemove, onDuplicate, onMove, onSaveToCatalog, lineTotal, money, error, allowNegative }: {
   index: number;
   count: number;
   control: Control<EstimateFormInput>;
@@ -362,6 +401,7 @@ function LineRow({ index, count, control, register, onRemove, onDuplicate, onMov
   lineTotal: number;
   money: (n: number) => string;
   error?: { name?: { message?: string } };
+  allowNegative?: boolean; // change orders: negative rate = credit
 }) {
   const [open, setOpen] = useState(false);
   const desc = useWatch({ control, name: `lineItems.${index}.description` });
@@ -399,7 +439,7 @@ function LineRow({ index, count, control, register, onRemove, onDuplicate, onMov
             </Select>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">$</span>
-              <Input type="number" inputMode="decimal" step="0.01" min="0" aria-label="Unit price" className="pl-7" {...register(`lineItems.${index}.unitPrice`)} />
+              <Input type="number" inputMode="decimal" step="0.01" min={allowNegative ? undefined : "0"} aria-label="Unit price" className="pl-7" {...register(`lineItems.${index}.unitPrice`)} />
             </div>
             <span className="text-sm font-medium tabular-nums text-right whitespace-nowrap">{money(lineTotal)}</span>
           </div>

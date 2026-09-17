@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { toClientDTO, toEstimateDTO, toOrgBranding, toServiceItemDTO } from "./dto";
+import { estimateInclude, toClientDTO, toEstimateDTO, toOrgBranding, toServiceItemDTO } from "./dto";
 import type { Organization } from "@/generated/prisma/client";
 
 /** Everything the editor needs, serialized. */
@@ -28,6 +28,6 @@ export async function loadEditorData(orgId: string, org: Organization) {
 }
 
 export async function loadEstimate(orgId: string, id: string) {
-  const e = await prisma.estimate.findFirst({ where: { id, organizationId: orgId }, include: { client: true, lineItems: true, photos: true, invoice: { select: { id: true } } } });
+  const e = await prisma.estimate.findFirst({ where: { id, organizationId: orgId }, include: estimateInclude });
   return e ? toEstimateDTO(e) : null;
 }

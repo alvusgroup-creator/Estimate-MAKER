@@ -5,6 +5,8 @@ import { Check, Mail, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import { emailEstimate } from "@/lib/estimates/actions";
+import { docWords } from "@/lib/utils";
+import type { DocumentKind } from "@/generated/prisma/enums";
 
 /**
  * Inline "send by email" form for the Share panel. Sends from the app (Resend) with the public link;
@@ -12,7 +14,7 @@ import { emailEstimate } from "@/lib/estimates/actions";
  */
 export function EmailDialog({ estimateId, kind, number, defaultTo, firstName, onClose }: {
   estimateId: string;
-  kind: "ESTIMATE" | "INVOICE";
+  kind: DocumentKind;
   number: string;
   defaultTo: string | null;
   firstName: string;
@@ -23,7 +25,7 @@ export function EmailDialog({ estimateId, kind, number, defaultTo, firstName, on
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
-  const word = kind === "INVOICE" ? "invoice" : "estimate";
+  const { word } = docWords(kind);
 
   const send = () => {
     setError(null);

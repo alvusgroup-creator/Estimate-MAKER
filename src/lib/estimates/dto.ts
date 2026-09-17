@@ -65,6 +65,12 @@ export type LineItemDTO = {
 
 export type PhotoDTO = { id?: string; url: string; caption: string | null; showOnDocument: boolean };
 
+/** A change order as seen from its parent estimate (list card, revised total). */
+export type ChangeOrderSummaryDTO = { id: string; number: string; title: string | null; status: EstimateStatus; total: number; createdAt: string };
+
+/** The accepted estimate a change order amends, plus what was already approved before it. */
+export type ParentEstimateDTO = { id: string; number: string; title: string | null; total: number; priorChangesTotal: number };
+
 export type EstimateDTO = {
   id: string;
   kind: DocumentKind;
@@ -78,6 +84,9 @@ export type EstimateDTO = {
   paidAt: string | null;
   sourceEstimateId: string | null;
   invoiceId: string | null;
+  parentEstimateId: string | null;
+  parent: ParentEstimateDTO | null; // change orders only
+  changeOrders: ChangeOrderSummaryDTO[]; // estimates only
   clientId: string;
   client: ClientDTO;
   jobAddressLine1: string | null;
@@ -112,7 +121,17 @@ export type EstimateDTO = {
   photos: PhotoDTO[];
 };
 
-type EstimateWithRelations = Prisma.EstimateGetPayload<{ include: { client: true; lineItems: true; photos: true; invoice: { select: { id: true } } } }>;
+/** The include every full-document read uses, so `toEstimateDTO` always has the same shape. */
+export const estimateInclude = {
+  client: true,
+  lineItems: true,
+  photos: true,
+  invoice: { select: { id: true } },
+  parentEstimate: { select: { id: true, number: true, title: true, total: true, changeOrders: { where: { status: "ACCEPTED" }, select: { id: true, total: true } } } },
+  changeOrders: { orderBy: { createdAt: "asc" }, select: { id: true, number: true, title: true, status: true, total: true, createdAt: true } },
+} satisfies Prisma.EstimateInclude;
+
+type EstimateWithRelations = Prisma.EstimateGetPayload<{ include: typeof estimateInclude }>;
 
 const num = (d: Prisma.Decimal | null | undefined) => (d == null ? null : Number(d));
 const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
@@ -140,6 +159,18 @@ export function toEstimateDTO(e: EstimateWithRelations): EstimateDTO {
     paidAt: iso(e.paidAt),
     sourceEstimateId: e.sourceEstimateId,
     invoiceId: e.invoice?.id ?? null,
+    parentEstimateId: e.parentEstimateId,
+    parent: e.parentEstimate
+      ? {
+          id: e.parentEstimate.id,
+          number: e.parentEstimate.number,
+          title: e.parentEstimate.title,
+          total: Number(e.parentEstimate.total),
+          // Other accepted change orders on the same estimate — this one is excluded so the document can say "previously approved"
+          priorChangesTotal: e.parentEstimate.changeOrders.filter((c) => c.id !== e.id).reduce((s, c) => s + Number(c.total), 0),
+        }
+      : null,
+    changeOrders: e.changeOrders.map((c) => ({ id: c.id, number: c.number, title: c.title, status: c.status, total: Number(c.total), createdAt: c.createdAt.toISOString() })),
     clientId: e.clientId,
     client: toClientDTO(e.client),
     jobAddressLine1: e.jobAddressLine1,

@@ -47,6 +47,11 @@ export const estimateFormSchema = z.object({
   photos: z.array(photoSchema).max(20).default([]),
 });
 
+/** Change orders can credit the customer (scope removed), so a line's rate may be negative. */
+export const changeOrderFormSchema = estimateFormSchema.extend({
+  lineItems: z.array(lineItemSchema.extend({ unitPrice: z.coerce.number() })).min(1, "Add at least one line"),
+});
+
 export type EstimateFormValues = z.output<typeof estimateFormSchema>;
 export type EstimateFormInput = z.input<typeof estimateFormSchema>;
 export type LineItemValues = z.infer<typeof lineItemSchema>;

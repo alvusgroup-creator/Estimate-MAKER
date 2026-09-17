@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { requireOrg } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { computeTotals } from "./calc";
-import { estimateFormSchema, type EstimateFormValues } from "./schemas";
+import { changeOrderFormSchema, estimateFormSchema, type EstimateFormValues } from "./schemas";
+import { docWords } from "@/lib/utils";
+import type { Prisma } from "@/generated/prisma/client";
 import type { EstimateStatus } from "@/generated/prisma/enums";
 import { emailEnabled, sendEmail } from "@/lib/email/send";
 import { customerDocumentEmail } from "@/lib/email/templates";
@@ -71,6 +73,24 @@ async function bumpUsage(serviceItemIds: (string | null | undefined)[]) {
   if (ids.length) await prisma.serviceItem.updateMany({ where: { id: { in: ids } }, data: { usageCount: { increment: 1 } } });
 }
 
+type Tx = Prisma.TransactionClient;
+
+/** Atomic "EST-1001" allocation per org. */
+async function nextEstimateNumber(tx: Tx, orgId: string) {
+  const org = await tx.organization.update({
+    where: { id: orgId },
+    data: { nextEstimateNumber: { increment: 1 } },
+    select: { estimatePrefix: true, nextEstimateNumber: true },
+  });
+  return `${org.estimatePrefix}${org.nextEstimateNumber - 1}`;
+}
+
+/** Change orders are numbered after their estimate: "EST-1001-CO1", "-CO2"… (unique per org). */
+async function nextChangeOrderNumber(tx: Tx, parentId: string) {
+  const parent = await tx.estimate.findUniqueOrThrow({ where: { id: parentId }, select: { number: true, _count: { select: { changeOrders: true } } } });
+  return `${parent.number}-CO${parent._count.changeOrders + 1}`;
+}
+
 export async function createEstimate(raw: unknown): Promise<SaveResult> {
   const { orgId } = await requireOrg();
   const parsed = estimateFormSchema.safeParse(raw);
@@ -82,13 +102,8 @@ export async function createEstimate(raw: unknown): Promise<SaveResult> {
   const { scalar, lines, photos } = buildWriteData(parsed.data);
 
   const estimate = await prisma.$transaction(async (tx) => {
-    // Atomic number allocation per org
-    const org = await tx.organization.update({
-      where: { id: orgId },
-      data: { nextEstimateNumber: { increment: 1 } },
-      select: { estimatePrefix: true, nextEstimateNumber: true, currency: true },
-    });
-    const number = `${org.estimatePrefix}${org.nextEstimateNumber - 1}`;
+    const number = await nextEstimateNumber(tx, orgId);
+    const org = await tx.organization.findUniqueOrThrow({ where: { id: orgId }, select: { currency: true } });
 
     return tx.estimate.create({
       data: {
@@ -110,15 +125,57 @@ export async function createEstimate(raw: unknown): Promise<SaveResult> {
   return { ok: true, id: estimate.id };
 }
 
-export async function updateEstimate(id: string, raw: unknown): Promise<SaveResult> {
+/**
+ * Change order = extra (or removed) work on an accepted estimate, signed separately by the customer.
+ * It's its own document with its own public link; the parent stays locked and untouched.
+ */
+export async function createChangeOrder(parentId: string, raw: unknown): Promise<SaveResult> {
   const { orgId } = await requireOrg();
-  const parsed = estimateFormSchema.safeParse(raw);
+  const parsed = changeOrderFormSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid data" };
 
-  const existing = await prisma.estimate.findFirst({ where: { id, organizationId: orgId }, select: { id: true, status: true } });
+  const parent = await prisma.estimate.findFirst({ where: { id: parentId, organizationId: orgId, kind: "ESTIMATE" }, select: { id: true, status: true, clientId: true, currency: true } });
+  if (!parent) return { ok: false, error: "Estimate not found" };
+  if (parent.status !== "ACCEPTED") return { ok: false, error: "Change orders can only be added to an accepted estimate." };
+
+  const { scalar, lines, photos } = buildWriteData({ ...parsed.data, clientId: parent.clientId, expiresAt: null, depositType: null, depositValue: null });
+
+  const co = await prisma.$transaction(async (tx) => {
+    const number = await nextChangeOrderNumber(tx, parent.id);
+    const created = await tx.estimate.create({
+      data: {
+        organizationId: orgId,
+        kind: "CHANGE_ORDER",
+        parentEstimateId: parent.id,
+        number,
+        currency: parent.currency,
+        ...scalar,
+        lineItems: { create: lines },
+        photos: { create: photos },
+        events: { create: { type: "CREATED", metadata: { parentId: parent.id } } },
+      },
+      select: { id: true },
+    });
+    await tx.estimateEvent.create({ data: { estimateId: parent.id, type: "CHANGE_ORDER_CREATED", metadata: { changeOrderId: created.id, number } } });
+    return created;
+  });
+
+  await bumpUsage(lines.map((l) => l.serviceItemId));
+  revalidatePath("/estimates");
+  revalidatePath(`/estimates/${parent.id}`);
+  revalidatePath("/dashboard");
+  return { ok: true, id: co.id };
+}
+
+export async function updateEstimate(id: string, raw: unknown): Promise<SaveResult> {
+  const { orgId } = await requireOrg();
+  const existing = await prisma.estimate.findFirst({ where: { id, organizationId: orgId }, select: { id: true, status: true, kind: true } });
   if (!existing) return { ok: false, error: "Estimate not found" };
-  if (existing.status === "ACCEPTED") return { ok: false, error: "Accepted estimates are locked. Duplicate it to make changes." };
+  if (existing.status === "ACCEPTED") return { ok: false, error: existing.kind === "ESTIMATE" ? "Accepted estimates are locked. Add a change order or duplicate it to make changes." : "Accepted change orders are locked." };
   if (existing.status === "PAID") return { ok: false, error: "Paid invoices are locked." };
+
+  const parsed = (existing.kind === "CHANGE_ORDER" ? changeOrderFormSchema : estimateFormSchema).safeParse(raw);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid data" };
 
   const { scalar, lines, photos } = buildWriteData(parsed.data);
 
@@ -173,23 +230,22 @@ export async function duplicateEstimate(id: string) {
   if (!src) throw new Error("Not found");
 
   const copy = await prisma.$transaction(async (tx) => {
-    const org = await tx.organization.update({
-      where: { id: orgId },
-      data: { nextEstimateNumber: { increment: 1 } },
-      select: { estimatePrefix: true, nextEstimateNumber: true, defaultValidDays: true },
-    });
-    const number = `${org.estimatePrefix}${org.nextEstimateNumber - 1}`;
+    const org = await tx.organization.findUniqueOrThrow({ where: { id: orgId }, select: { defaultValidDays: true } });
+    const parentId = src.kind === "CHANGE_ORDER" ? src.parentEstimateId : null;
+    const number = parentId ? await nextChangeOrderNumber(tx, parentId) : await nextEstimateNumber(tx, orgId);
 
     return tx.estimate.create({
       data: {
         organizationId: orgId,
         clientId: src.clientId,
+        kind: parentId ? "CHANGE_ORDER" : "ESTIMATE",
+        parentEstimateId: parentId,
         number,
         title: src.title,
         template: src.template,
         status: "DRAFT",
         issueDate: new Date(),
-        expiresAt: new Date(Date.now() + org.defaultValidDays * 864e5),
+        expiresAt: parentId ? null : new Date(Date.now() + org.defaultValidDays * 864e5),
         jobAddressLine1: src.jobAddressLine1,
         jobAddressLine2: src.jobAddressLine2,
         jobCity: src.jobCity,
@@ -244,16 +300,37 @@ export async function deleteEstimate(id: string) {
 
 /**
  * Accepted estimate → invoice. Same lines and totals, new number (INV-), due date from org default.
- * One invoice per estimate (sourceEstimateId is unique); re-running opens the existing one.
+ * Accepted change orders are appended as their own lines and the totals recomputed, so the
+ * invoice is the revised contract. One invoice per estimate (sourceEstimateId is unique);
+ * re-running opens the existing one.
  */
 export async function convertToInvoice(estimateId: string) {
   const { orgId } = await requireOrg();
   const src = await prisma.estimate.findFirst({
     where: { id: estimateId, organizationId: orgId, kind: "ESTIMATE" },
-    include: { lineItems: true, invoice: { select: { id: true } }, photos: true },
+    include: {
+      lineItems: { orderBy: { position: "asc" } }, invoice: { select: { id: true } }, photos: true,
+      changeOrders: { where: { status: "ACCEPTED" }, orderBy: { createdAt: "asc" }, include: { lineItems: { orderBy: { position: "asc" } } } },
+    },
   });
   if (!src) throw new Error("Not found");
   if (src.invoice) redirect(`/estimates/${src.invoice.id}`);
+
+  // Lines = original + each accepted change order, tagged with its number
+  const lineRows = [
+    ...src.lineItems.map((l) => ({ serviceItemId: l.serviceItemId, name: l.name, description: l.description, quantity: l.quantity, unit: l.unit, unitPrice: l.unitPrice, taxable: l.taxable, isOptional: l.isOptional })),
+    ...src.changeOrders.flatMap((co) => co.lineItems.map((l) => ({ serviceItemId: l.serviceItemId, name: `${co.number}: ${l.name}`, description: l.description, quantity: l.quantity, unit: l.unit, unitPrice: l.unitPrice, taxable: l.taxable, isOptional: l.isOptional }))),
+  ];
+  // A % discount was agreed on the original scope only, so it becomes the fixed amount already granted
+  const hasChanges = src.changeOrders.length > 0;
+  const discountType = hasChanges && src.discountType === "PERCENT" ? "FIXED" : src.discountType;
+  const discountValue = hasChanges && src.discountType === "PERCENT" ? src.discountAmount : src.discountValue;
+  const totals = computeTotals({
+    lines: lineRows.map((l) => ({ quantity: Number(l.quantity), unitPrice: Number(l.unitPrice), taxable: l.taxable, isOptional: l.isOptional })),
+    discountType, discountValue: discountValue == null ? null : Number(discountValue),
+    taxRate: Number(src.taxRate),
+    depositType: src.depositType, depositValue: src.depositValue == null ? null : Number(src.depositValue),
+  });
 
   const inv = await prisma.$transaction(async (tx) => {
     const org = await tx.organization.update({
@@ -284,31 +361,27 @@ export async function convertToInvoice(estimateId: string) {
         terms: src.terms,
         internalNotes: src.internalNotes,
         currency: src.currency,
-        subtotal: src.subtotal,
-        discountType: src.discountType,
-        discountValue: src.discountValue,
-        discountAmount: src.discountAmount,
+        subtotal: totals.subtotal,
+        discountType,
+        discountValue,
+        discountAmount: totals.discountAmount,
         taxRate: src.taxRate,
         taxLabel: src.taxLabel,
-        taxAmount: src.taxAmount,
-        total: src.total,
-        // Deposit already collected on acceptance is carried over so the invoice shows the balance
+        taxAmount: totals.taxAmount,
+        total: totals.total,
+        // Deposit already collected on acceptance is carried over so the invoice shows the balance.
+        // It was a share of the original total, so keep that amount rather than re-deriving it.
         depositType: src.depositType,
         depositValue: src.depositValue,
         depositAmount: src.depositAmount,
-        lineItems: {
-          create: src.lineItems.map((l) => ({
-            position: l.position, serviceItemId: l.serviceItemId, name: l.name, description: l.description,
-            quantity: l.quantity, unit: l.unit, unitPrice: l.unitPrice, taxable: l.taxable, isOptional: l.isOptional, lineTotal: l.lineTotal,
-          })),
-        },
+        lineItems: { create: lineRows.map((l, i) => ({ ...l, position: i, lineTotal: totals.lineTotals[i] })) },
         photos: { create: src.photos.map((p) => ({ url: p.url, caption: p.caption, position: p.position, showOnDocument: false })) },
         events: { create: { type: "CREATED", metadata: { from: src.id } } },
       },
       select: { id: true },
     });
 
-    await tx.estimateEvent.create({ data: { estimateId: src.id, type: "CONVERTED_TO_INVOICE", metadata: { invoiceId: created.id, number } } });
+    await tx.estimateEvent.create({ data: { estimateId: src.id, type: "CONVERTED_TO_INVOICE", metadata: { invoiceId: created.id, number, changeOrders: src.changeOrders.map((c) => c.number) } } });
     return created;
   });
 
@@ -352,7 +425,7 @@ export async function emailEstimate(
     select: { id: true, number: true, kind: true, title: true, status: true, total: true, currency: true, expiresAt: true, dueDate: true, publicToken: true, client: { select: { firstName: true, email: true } } },
   });
   if (!e) return { ok: false, error: "Not found" };
-  if (e.status === "EXPIRED") return { ok: false, error: "This estimate has expired — reopen it or duplicate it first." };
+  if (e.status === "EXPIRED") return { ok: false, error: `This ${docWords(e.kind).word} has expired — reopen it or duplicate it first.` };
 
   const mail = customerDocumentEmail({
     doc: {

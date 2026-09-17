@@ -27,3 +27,10 @@ export function daysFromNow(days: number) {
   d.setDate(d.getDate() + days);
   return d;
 }
+
+/** Customer-facing name of a document, by kind. `word` for prose, `Word` for headings/subjects. */
+export function docWords(kind: "ESTIMATE" | "INVOICE" | "CHANGE_ORDER") {
+  const word = kind === "INVOICE" ? "invoice" : kind === "CHANGE_ORDER" ? "change order" : "estimate";
+  const Word = kind === "INVOICE" ? "Invoice" : kind === "CHANGE_ORDER" ? "Change order" : "Estimate";
+  return { word, Word };
+}

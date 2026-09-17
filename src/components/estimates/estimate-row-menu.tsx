@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition, type ReactNode } from "react";
-import { BadgeDollarSign, Copy, CopyPlus, ExternalLink, Eye, Mail, MessageSquare, Pencil, Printer, Receipt, Send, ThumbsDown, ThumbsUp, Trash2, Undo2 } from "lucide-react";
+import { BadgeDollarSign, Copy, CopyPlus, ExternalLink, Eye, FilePlus2, Mail, MessageSquare, Pencil, Printer, Receipt, Send, ThumbsDown, ThumbsUp, Trash2, Undo2 } from "lucide-react";
 import { ContextMenu, type MenuItem } from "@/components/ui/context-menu";
 import { convertToInvoice, deleteEstimate, duplicateEstimate, markInvoicePaid, setEstimateStatus } from "@/lib/estimates/actions";
 import type { EstimateStatus, DocumentKind } from "@/generated/prisma/enums";
+import { docWords } from "@/lib/utils";
 
 export type EstimateRowData = {
   id: string;
@@ -23,7 +24,7 @@ export function useEstimateMenu(e: EstimateRowData, opts?: { includeOpen?: boole
   const [, start] = useTransition();
   const inv = e.kind === "INVOICE";
   const url = `${typeof window !== "undefined" ? window.location.origin : ""}/e/${e.publicToken}`;
-  const docWord = inv ? "invoice" : "estimate";
+  const { word: docWord, Word } = docWords(e.kind);
   const editable = e.status !== "ACCEPTED" && e.status !== "PAID";
   const open = e.status === "SENT" || e.status === "VIEWED";
 
@@ -34,13 +35,13 @@ export function useEstimateMenu(e: EstimateRowData, opts?: { includeOpen?: boole
   const markSentIfDraft = () => { if (e.status === "DRAFT") start(() => setEstimateStatus(e.id, "SENT")); };
 
   const items: MenuItem[] = [
-    { type: "label", label: `${inv ? "Invoice" : "Estimate"} ${e.number}` },
+    { type: "label", label: `${Word} ${e.number}` },
     ...(opts?.includeOpen === false ? [] : [{ label: "Open", icon: Eye, href: `/estimates/${e.id}` } satisfies MenuItem]),
     { label: "Edit", icon: Pencil, href: `/estimates/${e.id}/edit`, disabled: !editable, hint: !editable ? "locked" : undefined },
     { type: "separator" },
     { label: e.status === "DRAFT" ? "Copy link & mark sent" : "Copy link", icon: Copy, onSelect: copyLink },
     { label: "Text to client", icon: MessageSquare, href: `sms:${e.client.phone ?? ""}?&body=${encodeURIComponent(`Hi ${e.client.firstName}, here's your ${docWord} ${e.number}: ${url}`)}`, disabled: !e.client.phone, onSelect: markSentIfDraft },
-    { label: "Email to client", icon: Mail, href: `mailto:${e.client.email ?? ""}?subject=${encodeURIComponent(`${inv ? "Invoice" : "Estimate"} ${e.number}`)}&body=${encodeURIComponent(`Hi ${e.client.firstName},\n\nHere's your ${docWord}: ${url}`)}`, disabled: !e.client.email, onSelect: markSentIfDraft },
+    { label: "Email to client", icon: Mail, href: `mailto:${e.client.email ?? ""}?subject=${encodeURIComponent(`${Word} ${e.number}`)}&body=${encodeURIComponent(`Hi ${e.client.firstName},\n\nHere's your ${docWord}: ${url}`)}`, disabled: !e.client.email, onSelect: markSentIfDraft },
     { label: "Open public link", icon: ExternalLink, href: url, external: true },
     { label: "Print / PDF", icon: Printer, href: `${url}?print=1`, external: true },
     { type: "separator" },
@@ -55,7 +56,8 @@ export function useEstimateMenu(e: EstimateRowData, opts?: { includeOpen?: boole
       items.push({ label: "Mark accepted", icon: ThumbsUp, onSelect: () => start(() => setEstimateStatus(e.id, "ACCEPTED")) });
       items.push({ label: "Mark declined", icon: ThumbsDown, onSelect: () => start(() => setEstimateStatus(e.id, "DECLINED")) });
     }
-    if (e.status === "ACCEPTED") {
+    if (e.status === "ACCEPTED" && e.kind === "ESTIMATE") {
+      items.push({ label: "New change order", icon: FilePlus2, href: `/estimates/${e.id}/change-order` });
       items.push(e.invoiceId
         ? { label: "Open invoice", icon: Receipt, href: `/estimates/${e.invoiceId}` }
         : { label: "Convert to invoice", icon: Receipt, onSelect: () => start(() => convertToInvoice(e.id)) });

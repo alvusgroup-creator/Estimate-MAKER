@@ -22,6 +22,7 @@ const filters: { key: string; label: string; kind: DocumentKind; statuses?: Esti
   { key: "declined", label: "Declined / expired", kind: "ESTIMATE", statuses: ["DECLINED", "EXPIRED"] },
   { key: "invoices", label: "Invoices", kind: "INVOICE" },
   { key: "unpaid", label: "Unpaid", kind: "INVOICE", statuses: ["DRAFT", "SENT", "VIEWED"] },
+  { key: "changes", label: "Change orders", kind: "CHANGE_ORDER" },
 ];
 
 export default async function EstimatesPage({ searchParams }: { searchParams: Promise<{ f?: string; q?: string }> }) {
@@ -53,7 +54,7 @@ export default async function EstimatesPage({ searchParams }: { searchParams: Pr
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{filter.kind === "INVOICE" ? "Invoices" : "Estimates"}</h1>
+        <h1 className="text-2xl font-semibold">{filter.kind === "INVOICE" ? "Invoices" : filter.kind === "CHANGE_ORDER" ? "Change orders" : "Estimates"}</h1>
         <Link href="/estimates/new" className={buttonVariants()}><Plus className="h-4 w-4" /> New</Link>
       </div>
 
@@ -78,7 +79,7 @@ export default async function EstimatesPage({ searchParams }: { searchParams: Pr
 
       <Card>
         {estimates.length === 0 ? (
-          <EmptyState title={q ? "No matches" : filter.kind === "INVOICE" ? "No invoices yet" : `No ${filter.key === "all" ? "" : filter.label.toLowerCase() + " "}estimates`} description={q ? "Try a different search." : filter.kind === "INVOICE" ? "Accept an estimate, then use “Convert to invoice”." : undefined} />
+          <EmptyState title={q ? "No matches" : filter.kind === "INVOICE" ? "No invoices yet" : filter.kind === "CHANGE_ORDER" ? "No change orders yet" : `No ${filter.key === "all" ? "" : filter.label.toLowerCase() + " "}estimates`} description={q ? "Try a different search." : filter.kind === "INVOICE" ? "Accept an estimate, then use “Convert to invoice”." : filter.kind === "CHANGE_ORDER" ? "Open an accepted estimate and click “Change order” when the customer asks for extra work." : undefined} />
         ) : (
           <ul className="divide-y divide-border">
             {estimates.map((e) => (

@@ -134,6 +134,28 @@ describe("computeTotals", () => {
   });
 });
 
+describe("change orders", () => {
+  it("nets credits (negative rates) against extras and taxes the net", () => {
+    const t = computeTotals({
+      lines: [
+        { quantity: 1, unitPrice: 800, taxable: true }, // extra: exhaust fan
+        { quantity: 1, unitPrice: -300, taxable: true }, // credit: removed scope
+      ],
+      taxRate: 0.1,
+    });
+    expect(t.subtotal).toBe(500);
+    expect(t.taxAmount).toBe(50);
+    expect(t.total).toBe(550);
+  });
+
+  it("can be a pure credit with a negative total", () => {
+    const t = computeTotals({ lines: [{ quantity: 2, unitPrice: -125.5, taxable: false }], taxRate: 0.0825 });
+    expect(t.subtotal).toBe(-251);
+    expect(t.taxAmount).toBe(0);
+    expect(t.total).toBe(-251);
+  });
+});
+
 describe("formatMoney", () => {
   it("formats USD by default and honors other currency/locale pairs", () => {
     expect(formatMoney(1234.5)).toBe("$1,234.50");

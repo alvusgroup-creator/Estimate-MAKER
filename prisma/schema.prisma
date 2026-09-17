@@ -203,11 +203,13 @@ enum EstimateStatus {
   PAID     // invoices only
 }
 
-// One table serves both documents: an invoice is an estimate with kind=INVOICE,
-// usually created from an accepted estimate (sourceEstimateId).
+// One table serves every document: an invoice is an estimate with kind=INVOICE
+// (created from an accepted estimate via sourceEstimateId); a change order is an
+// addendum to an accepted estimate (parentEstimateId) that the customer signs separately.
 enum DocumentKind {
   ESTIMATE
   INVOICE
+  CHANGE_ORDER
 }
 
 enum DiscountType {
@@ -241,6 +243,11 @@ model Estimate {
   sourceEstimateId String?   @unique
   sourceEstimate   Estimate? @relation("EstimateToInvoice", fields: [sourceEstimateId], references: [id], onDelete: SetNull)
   invoice          Estimate? @relation("EstimateToInvoice")
+
+  // Change order ← accepted estimate lineage (many per estimate; number = parent number + "-CO<n>")
+  parentEstimateId String?
+  parentEstimate   Estimate?  @relation("EstimateChangeOrders", fields: [parentEstimateId], references: [id], onDelete: Cascade)
+  changeOrders     Estimate[] @relation("EstimateChangeOrders")
 
   // Snapshot of the job address (client address can change later)
   jobAddressLine1 String?
@@ -292,6 +299,7 @@ model Estimate {
   @@index([organizationId, status])
   @@index([organizationId, clientId])
   @@index([organizationId, createdAt])
+  @@index([parentEstimateId])
 }
 
 model EstimateLineItem {
@@ -328,6 +336,7 @@ enum EstimateEventType {
   STATUS_CHANGED
   EXPIRED
   CONVERTED_TO_INVOICE
+  CHANGE_ORDER_CREATED // on the parent estimate; the change order itself gets CREATED
   PAID
 }
 

@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { toEstimateDTO, toOrgBranding } from "@/lib/estimates/dto";
+import { estimateInclude, toEstimateDTO, toOrgBranding } from "@/lib/estimates/dto";
+import { docWords } from "@/lib/utils";
 import { EstimateDocument } from "@/components/templates/estimate-document";
 import { PublicActions } from "./public-actions";
 import { PrintTrigger } from "./print-trigger";
@@ -16,7 +17,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const e = await prisma.estimate.findUnique({ where: { publicToken: token }, select: { number: true, kind: true, organization: { select: { name: true } } } });
-  return { title: e ? `${e.kind === "INVOICE" ? "Invoice" : "Estimate"} ${e.number} · ${e.organization.name}` : "Estimate", robots: { index: false } };
+  return { title: e ? `${docWords(e.kind).Word} ${e.number} · ${e.organization.name}` : "Estimate", robots: { index: false } };
 }
 
 export default async function PublicEstimatePage({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ print?: string }> }) {
@@ -24,7 +25,7 @@ export default async function PublicEstimatePage({ params, searchParams }: { par
 
   const raw = await prisma.estimate.findUnique({
     where: { publicToken: token },
-    include: { client: true, lineItems: true, photos: true, organization: true, invoice: { select: { id: true } } },
+    include: { ...estimateInclude, organization: true },
   });
   if (!raw) notFound();
 
@@ -62,7 +63,7 @@ export default async function PublicEstimatePage({ params, searchParams }: { par
 
   const estimate = toEstimateDTO(raw);
   const org = toOrgBranding(raw.organization);
-  const canRespond = raw.kind === "ESTIMATE" && (raw.status === "SENT" || raw.status === "VIEWED");
+  const canRespond = raw.kind !== "INVOICE" && (raw.status === "SENT" || raw.status === "VIEWED");
 
   return (
     <main className="min-h-screen bg-neutral-100 print:bg-white">
@@ -76,6 +77,7 @@ export default async function PublicEstimatePage({ params, searchParams }: { par
               jobAddress: { addressLine1: estimate.jobAddressLine1, addressLine2: estimate.jobAddressLine2, city: estimate.jobCity, state: estimate.jobState, postalCode: estimate.jobPostalCode },
               lines: estimate.lineItems,
               photos: estimate.photos.filter((p) => p.showOnDocument),
+              changeOrder: estimate.parent ? { parentNumber: estimate.parent.number, parentTitle: estimate.parent.title, originalTotal: estimate.parent.total, priorChangesTotal: estimate.parent.priorChangesTotal } : null,
             }}
           />
         </div>
