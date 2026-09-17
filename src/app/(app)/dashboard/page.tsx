@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertCircle, ArrowRight, BadgeDollarSign, ChevronRight, Clock, FileText, Plus, Target, Trophy, Users } from "lucide-react";
+import { AlertCircle, ArrowRight, BadgeDollarSign, ChevronRight, Clock, FileText, Plus, Target, Users } from "lucide-react";
 import { Greeting } from "@/components/greeting";
 import { requireOrg } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -78,8 +78,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
 
         <div className="text-center mt-6">
-          <p className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted"><Trophy className="h-3.5 w-3.5 text-brand-foreground/70" /> Won · {period === "month" ? monthLabel : yearLabel}</p>
-          <p className="text-[44px] sm:text-[56px] font-semibold tabular-nums tracking-tight leading-none mt-2">{money(won._sum.total)}</p>
+          <p className="text-[44px] sm:text-[56px] font-semibold tabular-nums tracking-tight leading-none">{money(won._sum.total)}</p>
           <p className="mt-3 text-sm">
             <span className="text-muted">Outstanding:</span>{" "}
             <Link href="/invoices?f=unpaid" className={cn("font-semibold tabular-nums", owed > 0 ? "text-danger" : "text-success")}>{money(owed)}</Link>
